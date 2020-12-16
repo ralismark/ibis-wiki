@@ -138,7 +138,7 @@ class Doc extends EventTarget {
     return this.docs[slug];
   }
 
-  knownSlugs() {
+  async knownSlugs() {
     return Object.keys(this.docs);
   }
 }
