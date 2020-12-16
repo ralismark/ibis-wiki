@@ -45,22 +45,33 @@ window.REPO = (() => {
   const pfs = fs.promises;
   const dir = "/";
 
-  const startup = (async () => {
-    const http = await import("https://unpkg.com/isomorphic-git@beta/http/web/index.js");
-    // await git.clone({
-    //   fs,
-    //   http,
-    //   dir,
-    //   corsProxy: 'https://cors.isomorphic-git.org',
-    //   url: 'https://github.com/ralismark/test-wiki',
-    //   singleBranch: true,
-    //   depth: 1,
-    // });
-
-    console.log("cloned!");
-  })();
+  // for ease of debugging
+  window.pfs = pfs;
 
   const api = {};
+
+  api.initialised = async () => {
+    const files = await pfs.readdir("/");
+    return files.includes(".git");
+  };
+
+  const startup = (async () => {
+    if(!await api.initialised()) {
+      const http = await import("https://unpkg.com/isomorphic-git@beta/http/web/index.js");
+
+      await git.clone({
+        fs,
+        http,
+        dir,
+        corsProxy: 'https://cors.isomorphic-git.org',
+        url: 'https://github.com/ralismark/test-wiki',
+        singleBranch: true,
+        depth: 1,
+      });
+
+      console.log("cloned!");
+    }
+  })();
 
   api.list = async () => {
     await startup;
