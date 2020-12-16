@@ -1,0 +1,76 @@
+/* css reset */
+
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+html, body, div {
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	padding-bottom: 100vh;
+}
+
+pre {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+p,
+h1, h2, h3, h4, h5, h6,
+ol, ul,
+ibis-view
+{
+	/* Use margin collapse */
+	margin: 1rem 0;
+}
+
+/* everything else */
+
+ibis-view > .CodeMirror {
+	height: auto;
+	margin: 1rem 0;
+}
+
+ibis-card {
+	display: block;
+	border: 1px solid rgba(127, 127, 127, 0.4);
+	border-radius: 4px;
+	padding: 0 1rem;
+	margin: 1rem 0;
+
+	transition: background 1s;
+}
+
+ibis-card.opened {
+	transition: background 0s;
+	background: grey;
+}
+
+ibis-index > div > a {
+	margin: 0 .5em;
+}
+
+ibis-index input {
+	width: 100%;
+	padding: 0.3rem;
+	margin-bottom: 0.5rem;
+	border: 1px solid grey;
+}
+
+body {
+	max-width: 600px;
+	padding: 1rem;
+	margin: 0 auto;
+}
+
+.cm-local-link {
+	cursor: pointer;
+}
+
+.CodeMirror {
+	font-family: sans-serif;
+	line-height: 1.5em;
+}
