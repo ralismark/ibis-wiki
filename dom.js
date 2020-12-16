@@ -68,11 +68,13 @@ const View = $.define("ibis-view", B => class View extends B {
   }
 
   async load() {
+    this.setAttribute("loading", "");
     const slug = this.slug;
     const rdoc = await DP.getRootDocument(slug);
 
     // Only apply change if we actually need to
     if(this.slug === slug && this.shownSlug !== slug) {
+      this.removeAttribute("loading");
       Doc.linkCodemirror(this.codemirror, rdoc);
       this.shownSlug = slug;
     }
@@ -132,32 +134,10 @@ const Index = $.define("ibis-index", B => class Index extends B {
     DP.addEventListener("listchanged", () => this.render());
   }
 
-  render() {
-    const slugs = DP.knownSlugs();
-
-    const linkItems = slugs.map(slug => {
-      const item = document.createElement("a");
-      item.innerText = slug;
-      item.href = "##";
-      item.onclick = e => {
-        e.preventDefault();
-        openCard(slug);
-      };
-      return item;
-    });
-
+  async render() {
     const links = document.createElement("div");
-    links.replaceChildren(...linkItems);
-
-    const datalistItems = slugs.map(slug => {
-      const item = document.createElement("option");
-      item.value = slug;
-      return item;
-    });
-
     const datalist = document.createElement("datalist");
     datalist.id = "index";
-    datalist.replaceChildren(...datalistItems);
 
     const searchBox = document.createElement("input");
     searchBox.setAttribute("list", "index");
@@ -170,5 +150,28 @@ const Index = $.define("ibis-index", B => class Index extends B {
     };
 
     this.replaceChildren(form, links);
+
+    // this may take time, so we set up the elements first
+    const slugs = await DP.knownSlugs();
+
+    const linkItems = slugs.map(slug => {
+      const item = document.createElement("a");
+      item.innerText = slug;
+      item.href = "##";
+      item.onclick = e => {
+        e.preventDefault();
+        openCard(slug);
+      };
+      return item;
+    });
+    links.replaceChildren(...linkItems);
+
+    const datalistItems = slugs.map(slug => {
+      const item = document.createElement("option");
+      item.value = slug;
+      return item;
+    });
+    datalist.replaceChildren(...datalistItems);
+
   }
 });
