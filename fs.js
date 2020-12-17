@@ -83,6 +83,8 @@ window.REPO = (() => {
 
       console.log("cloned!");
     }
+
+    await $.sleep(FAKE_DELAY);
   })();
 
   function file2slug(name) {
@@ -157,6 +159,9 @@ class Doc extends EventTarget {
 
   async createDocument(slug) {
     const doc = CodeMirror.Doc(await REPO.tryRead(slug, ""), "null");
+
+    await $.sleep(FAKE_DELAY);
+
     return doc;
   }
 
