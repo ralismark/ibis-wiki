@@ -85,6 +85,16 @@ window.REPO = (() => {
     }
   })();
 
+  function file2slug(name) {
+    name = name.replace(/\.md$/, "");
+    name = decodeURIComponent(name);
+    return name;
+  }
+
+  function slug2file(name) {
+    return "/" + encodeURIComponent(name) + ".md";
+  }
+
   api.list = async () => {
     await startup;
 
@@ -92,9 +102,7 @@ window.REPO = (() => {
     for(const file of await pfs.readdir(dir)) {
       if(file === ".git") continue;
       try {
-        let name = file.replace(/\.md$/, "");
-        name = decodeURIComponent(name);
-        entries.push(name);
+        entries.push(file2slug(file));
       } catch(err) {
         // if we get errors, just ignore the file
         console.warn(`ignoring '${file}':`, err);
@@ -106,15 +114,15 @@ window.REPO = (() => {
   api.read = async (name) => {
     await startup;
 
-    const file = "/" + encodeURIComponent(name) + ".md";
-    const content = await pfs.readFile(file);
-    return new TextDecoder("utf-8").decode(content);
+    const content = await pfs.readFile(slug2file(name), { encoding: "utf8" });
+    return content;
   };
 
   api.tryRead = async (name, otherwise = null) => {
     try {
       return await api.read(name);
     } catch(err) {
+      console.log(`couldn't read slug '${name}':`, err);
       return otherwise;
     }
   };
