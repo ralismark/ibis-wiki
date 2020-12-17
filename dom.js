@@ -65,21 +65,11 @@ const View = $.define("ibis-view", B => class View extends B {
       }
     });
 
-    this.codemirror.on("optionChanged", (cm, opt) => {
-      if(opt == "readOnly") {
-        if(cm.getOption("readOnly")) {
-          cm.getWrapperElement().classList.add("CodeMirror-readonly");
-        } else {
-          cm.getWrapperElement().classList.remove("CodeMirror-readonly");
-        }
-      }
-    });
-
     this.load();
   }
 
   async load() {
-    this.setAttribute("loading", "");
+    this.setAttribute("loading", "1");
     const slug = this.slug;
     const rdoc = await DP.getRootDocument(slug);
 
