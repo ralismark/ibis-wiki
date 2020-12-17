@@ -111,8 +111,10 @@ const PENDING_LATCHES = (() => {
   return multilatch(() => {
     console.log("latching PENDING");
     window.addEventListener("beforeunload", warning);
+    document.body.classList.add("ibis-pending");
   }, () => {
     console.log("unlatching PENDING");
     window.removeEventListener("beforeunload", warning);
+    document.body.classList.remove("ibis-pending");
   });
 })();

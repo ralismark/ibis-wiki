@@ -49,6 +49,15 @@ ibis-card.opened {
 	background: grey;
 }
 
+ibis-card[loading] {
+	transition: background 0s;
+	background: red;
+}
+
+ibis-card > h1 {
+	overflow-wrap: anywhere;
+}
+
 ibis-index > div > a {
 	margin: 0 .5em;
 }
@@ -78,3 +87,18 @@ body {
 	.CodeMirror-line.h {
 		font-size: 1.3em !important;
 	}
+
+#fixed {
+	position: fixed;
+	z-index: 100;
+	pointer-events: none;
+
+	width: 100%;
+	height: 100%;
+	top: 0;
+	left: 0;
+}
+
+body.ibis-pending #fixed {
+	border-top: 4px solid orange;
+}
