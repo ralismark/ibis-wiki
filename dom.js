@@ -51,6 +51,7 @@ const View = $.define("ibis-view", B => class View extends B {
       lineWrapping: true,
       cursorBlinkRate: 0,
     });
+    this.codemirror.getWrapperElement().classList.add("CodeMirror-readonly");
 
     this.codemirror.on("mousedown", ({}, event) => {
       const target = event.target;
@@ -61,6 +62,16 @@ const View = $.define("ibis-view", B => class View extends B {
         event.codemirrorIgnore = true;
 
         openCard(event.target.innerText);
+      }
+    });
+
+    this.codemirror.on("optionChanged", (cm, opt) => {
+      if(opt == "readOnly") {
+        if(cm.getOption("readOnly")) {
+          cm.getWrapperElement().classList.add("CodeMirror-readonly");
+        } else {
+          cm.getWrapperElement().classList.remove("CodeMirror-readonly");
+        }
       }
     });
 
