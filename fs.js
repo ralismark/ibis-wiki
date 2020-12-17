@@ -129,6 +129,10 @@ window.REPO = (() => {
     }
   };
 
+  api.write = async (name, content) => {
+    await pfs.writeFile(slug2file(name), content, { encoding: "utf8" });
+  };
+
   return api;
 
 })();
@@ -159,6 +163,15 @@ class Doc extends EventTarget {
 
   async createDocument(slug) {
     const doc = CodeMirror.Doc(await REPO.tryRead(slug, ""), "null");
+
+    // syncing to filesystem
+    doc.on("change", batchify(FS_UPDATE_INTERVAL, async () => {
+      const content = doc.getValue();
+      console.log(slug, ":", "writing changes...");
+      await REPO.write(slug, content);
+      await $.sleep(FAKE_DELAY);
+      console.log(slug, ":", "writing changes done");
+    }, PENDING_LATCHES));
 
     await $.sleep(FAKE_DELAY);
 
