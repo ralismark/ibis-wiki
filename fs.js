@@ -7,8 +7,20 @@ CodeMirror.defineMode("mdm", () => ({
 
   token: (stream, state) => {
 
-    // start of line resets everything
-    if(stream.sol()) state.state = "normal";
+    if(state.state == "skiptoend") {
+      stream.skipToEnd();
+      state.state = "normal";
+      return null;
+    }
+
+    if(stream.sol()) {
+      // forbid multi-line formatting
+      state.state = "normal";
+
+      let heading = stream.match(/#{1,6}/);
+      if(heading) return `line-h${heading.length} line-h meta`;
+
+    }
 
     if(state.state == "normal") {
 

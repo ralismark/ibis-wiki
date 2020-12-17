@@ -66,11 +66,15 @@ body {
 	margin: 0 auto;
 }
 
-.cm-local-link {
-	cursor: pointer;
-}
-
 .CodeMirror {
 	font-family: sans-serif;
 	line-height: 1.5em;
 }
+
+	.cm-local-link {
+		cursor: pointer;
+	}
+
+	.CodeMirror-line.h {
+		font-size: 1.3em !important;
+	}
