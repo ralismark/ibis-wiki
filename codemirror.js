@@ -1,5 +1,9 @@
 "use strict";
 
+/*
+ * This file defines a codemirror mode "mdm" which has our custom syntax format
+ */
+
 CodeMirror.defineMode("mdm", () => ({
 
     // valid states:
@@ -58,5 +62,3 @@ CodeMirror.defineMode("mdm", () => ({
     }
   },
 }));
-
-

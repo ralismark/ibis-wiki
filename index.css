@@ -27,6 +27,12 @@ ibis-view
 	margin: 1rem 0;
 }
 
+body {
+	max-width: 600px;
+	padding: 1rem;
+	margin: 0 auto;
+}
+
 /* everything else */
 
 ibis-view > .CodeMirror {
@@ -44,35 +50,29 @@ ibis-card {
 	transition: background 1s;
 }
 
-ibis-card.opened {
-	transition: background 0s;
-	background: grey;
-}
+	ibis-card.opened {
+		transition: background 0s;
+		background: rgba(127, 127, 127, 0.4);
+	}
 
-ibis-card[loading] {
-	transition: background 0s;
-	background: red;
-}
+	ibis-card[loading] {
+		transition: background 0s;
+		background: red;
+	}
 
-ibis-card > h1 {
-	overflow-wrap: anywhere;
-}
+	ibis-card > h1 {
+		overflow-wrap: anywhere;
+	}
 
-ibis-index > div > a {
-	margin: 0 .5em;
-}
+	ibis-index > div > a {
+		margin: 0 .5em;
+	}
 
-ibis-index input {
+ibis-search input {
 	width: 100%;
 	padding: 0.3rem;
 	margin-bottom: 0.5rem;
 	border: 1px solid grey;
-}
-
-body {
-	max-width: 600px;
-	padding: 1rem;
-	margin: 0 auto;
 }
 
 .CodeMirror {
@@ -91,18 +91,3 @@ body {
 	.CodeMirror .CodeMirror-line.blockquote {
 		background-color: rgba(0, 123, 255, 0.1);
 	}
-
-#fixed {
-	position: fixed;
-	z-index: 100;
-	pointer-events: none;
-
-	width: 100%;
-	height: 100%;
-	top: 0;
-	left: 0;
-}
-
-body.ibis-pending #fixed {
-	border-top: 4px solid orange;
-}

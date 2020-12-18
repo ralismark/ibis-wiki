@@ -1,10 +1,13 @@
 "use strict";
 
+/*
+ * Opens a new card into the window
+ */
 function openCard(name) {
   name = name.trim();
 
   let targetCard = null;
-  for(let card of document.querySelectorAll('ibis-card')) {
+  for(let card of document.querySelectorAll("ibis-card")) {
     if(card.slug === name) {
       targetCard = card;
       break;
@@ -71,12 +74,13 @@ const View = $.define("ibis-view", B => class View extends B {
   async load() {
     this.setAttribute("loading", "1");
     const slug = this.slug;
-    const rdoc = await DP.getRootDocument(slug);
+    const rdoc = await DP.open(slug);
 
     // Only apply change if we actually need to
     if(this.slug === slug && this.shownSlug !== slug) {
       this.removeAttribute("loading");
-      Doc.linkCodemirror(this.codemirror, rdoc);
+      this.codemirror.swapDoc(rdoc.linkedDoc({ sharedHist: true }));
+      this.codemirror.setOption("readOnly", false);
       this.shownSlug = slug;
     }
   }
@@ -135,25 +139,26 @@ const Index = $.define("ibis-index", B => class Index extends B {
     DP.addEventListener("listchanged", () => this.render());
   }
 
-  async render() {
+  async doRender() {
     const links = document.createElement("div");
     const datalist = document.createElement("datalist");
     datalist.id = "index";
 
-    const searchBox = document.createElement("input");
-    searchBox.setAttribute("list", "index");
-
-    const form = document.createElement("form");
-    form.replaceChildren(searchBox, datalist);
-    form.onsubmit = e => {
-      e.preventDefault();
-      openCard(searchBox.value);
-    };
-
-    this.replaceChildren(form, links);
+    // const searchBox = document.createElement("input");
+    // searchBox.setAttribute("list", "index");
+    //
+    // const form = document.createElement("form");
+    // form.replaceChildren(searchBox, datalist);
+    // form.onsubmit = e => {
+    //   e.preventDefault();
+    //   openCard(searchBox.value);
+    // };
+    //
+    // this.replaceChildren(form, links);
+    this.replaceChildren(links, datalist);
 
     // this may take time, so we set up the elements first
-    const slugs = await DP.knownSlugs();
+    const slugs = await DP.list();
 
     const linkItems = slugs.map(slug => {
       const item = document.createElement("a");
@@ -173,6 +178,24 @@ const Index = $.define("ibis-index", B => class Index extends B {
       return item;
     });
     datalist.replaceChildren(...datalistItems);
+  }
+});
 
+/*
+ * A search bar element that allows you to also open new documents
+ */
+const Search = $.define("ibis-search", B => class Search extends B {
+  async doRender() {
+    const searchBox = document.createElement("input");
+    searchBox.setAttribute("list", "index");
+
+    const form = document.createElement("form");
+    form.replaceChildren(searchBox);
+    form.onsubmit = e => {
+      e.preventDefault();
+      openCard(searchBox.value);
+    };
+
+    this.replaceChildren(form);
   }
 });

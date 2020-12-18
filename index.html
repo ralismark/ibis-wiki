@@ -16,8 +16,11 @@
     <script src="https://unpkg.com/isomorphic-git@beta"></script>
 
     <script>
-      const FS_UPDATE_INTERVAL = 500;
       const FAKE_DELAY = 0;
+
+      console.log(`config:
+            FAKE_DELAY : ${FAKE_DELAY}
+      `.trim());
     </script>
 
     <script src="utils.js"></script>
@@ -29,9 +32,11 @@
   </head>
 
   <body>
-    <div id="fixed"></div>
+    <ibis-search></ibis-search>
     <ibis-index></ibis-index>
   </body>
 
-  <script src="index.js"></script>
+  <script>
+    openCard("index");
+  </script>
 </html>
