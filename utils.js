@@ -43,18 +43,18 @@ const $ = (() => {
     return elemType;
   }
 
-  $.mix = function(deriver) {
-    let kind = deriver(Object);
-    kind.extend = deriver;
-    return kind;
-  }
-
+  /*
+   * Async function to sleep for a certain amount of time
+   */
   $.sleep = function(time) {
     return new Promise(resolve => {
       setTimeout(resolve, time);
     });
   }
 
+  /*
+   * Async function to wait until next animation frame
+   */
   $.frame = function() {
     return new Promise(resolve => {
       requestAnimationFrame(resolve);
@@ -63,58 +63,4 @@ const $ = (() => {
 
   return $;
 
-})();
-
-function batchify(delay, fn, opts = {}) {
-  let timeout = null;
-  let running = false; // to prevent multiple runs of fn
-
-  function poke() {
-    if(timeout !== null) clearTimeout(timeout);
-    else if(opts.latch && !running) opts.latch();
-
-    timeout = setTimeout(async () => {
-      timeout = null; // clear timeout
-      if(running) {
-        poke(); // schedule for later
-      } else {
-        running = true;
-        await fn();
-        if(opts.unlatch && timeout === null) opts.unlatch();
-        running = false;
-      }
-    }, delay);
-  }
-
-  return poke;
-}
-
-function multilatch(mlatch, munlatch) {
-  let counter = 0;
-
-  function latch() {
-    if(counter++ == 0) mlatch();
-  }
-
-  return {
-    latch: () => { if(counter++ == 0) mlatch(); },
-    unlatch: () => { if(--counter == 0) munlatch(); },
-  };
-}
-
-const PENDING_LATCHES = (() => {
-  function warning(e) {
-    e.preventDefault();
-    return e.returnValue = "tenpo lon la pali li lon. sina wile ala wile tawa?";
-  }
-
-  return multilatch(() => {
-    console.log("latching PENDING");
-    window.addEventListener("beforeunload", warning);
-    document.body.classList.add("ibis-pending");
-  }, () => {
-    console.log("unlatching PENDING");
-    window.removeEventListener("beforeunload", warning);
-    document.body.classList.remove("ibis-pending");
-  });
 })();
