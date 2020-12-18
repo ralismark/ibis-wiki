@@ -84,8 +84,12 @@ body {
 		cursor: pointer;
 	}
 
-	.CodeMirror-line.h {
+	.CodeMirror .CodeMirror-line.h {
 		font-size: 1.3em !important;
+	}
+
+	.CodeMirror .CodeMirror-line.blockquote {
+		background-color: rgba(0, 123, 255, 0.1);
 	}
 
 #fixed {
