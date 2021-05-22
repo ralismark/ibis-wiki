@@ -1,5 +1,7 @@
 "use strict";
 
+const CARDBOX = $("#cardbox");
+
 /*
  * Opens a new card into the window
  */
@@ -7,7 +9,7 @@ function openCard(name) {
   name = name.trim();
 
   let targetCard = null;
-  for(let card of document.querySelectorAll("ibis-card")) {
+  for(let card of CARDBOX.querySelectorAll("ibis-card")) {
     if(card.slug === name) {
       targetCard = card;
       break;
@@ -16,19 +18,10 @@ function openCard(name) {
 
   if(targetCard === null) {
     targetCard = new Card({ slug: name });
-    document.body.appendChild(targetCard);
+    CARDBOX.appendChild(targetCard);
   }
 
-  console.log("going to", targetCard);
-  targetCard.scrollIntoView({
-    behavior: "smooth",
-    block: "nearest",
-  });
-
-  document.activeElement.blur();
-
-  targetCard.classList.add("opened");
-  $.frame().then($.frame).then(() => targetCard.classList.remove("opened"));
+  targetCard.focus();
 }
 
 const View = $.define("ibis-view", B => class View extends B {
@@ -57,14 +50,18 @@ const View = $.define("ibis-view", B => class View extends B {
     this.codemirror.getWrapperElement().classList.add("CodeMirror-readonly");
 
     this.codemirror.on("mousedown", ({}, event) => {
-      const target = event.target;
-      if(!target.classList.contains("cm-local-link")) return;
+      const classList = event.target.classList;
+      if(!classList.contains("cm-js-click")) return;
+      if(event.button !== 0) return;
+      event.preventDefault();
+      event.codemirrorIgnore = true;
 
-      if(event.button === 0) {
-        event.preventDefault();
-        event.codemirrorIgnore = true;
-
-        openCard(event.target.innerText);
+      if(classList.contains("cm-js-click-opencard")) {
+        openCard(event.target.innerText.trim());
+      } else if(classList.contains("cm-js-click-unlock")) {
+        this.codemirror.getDoc().setValue("");
+      } else if(classList.contains("cm-js-click-openlink")) {
+        window.open(event.target.innerText.trim(), "_blank", "noopener,noreferrer");
       }
     });
 
@@ -101,6 +98,19 @@ const Card = $.define("ibis-card", B => class Card extends B {
 
   get content() { return this.inner.content; }
 
+  async focus() {
+    this.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
+    document.activeElement.blur();
+
+    this.classList.add("opened");
+    await $.frame();
+    await $.frame();
+    this.classList.remove("opened");
+  }
+
   constructor(props) {
     // don't have slug as an attribute
     super(props);
@@ -108,23 +118,28 @@ const Card = $.define("ibis-card", B => class Card extends B {
 
     this.inner = new View(slug ? { slug } : {});
 
-    const closeButton = document.createElement("a");
-    closeButton.innerText = "X";
-    closeButton.href = "##";
-    closeButton.onclick = e => {
-      e.preventDefault();
-      this.parentNode.removeChild(this);
-    };
+    const button = (name, onclick) => $.e("span", {
+      class: "card-button",
+      role: "button",
+      onclick: (e) => onclick(),
+    }, name);
 
-    const label = document.createElement("span");
-    label.innerText = this.slug;
+    const label = $.e("span", {}, this.slug);
 
-    const title = document.createElement("h1");
-    title.appendChild(closeButton);
-    title.append(" ");
-    title.appendChild(label);
-
-    this.appendChild(title);
+    this.appendChild($.e("h1", {},
+        label,
+        button("×", () => this.parentNode.removeChild(this)),
+        button("↑", () => {
+          if(!this.previousElementSibling) return;
+          this.previousElementSibling.insertAdjacentElement("beforebegin", this);
+          this.focus();
+        }),
+        button("↓", () => {
+          if(!this.nextElementSibling) return;
+          this.nextElementSibling.insertAdjacentElement("afterend", this);
+          this.focus();
+        }),
+    ));
     this.appendChild(this.inner);
     this.inner.addEventListener("render", () => label.innerText = this.slug);
   }
@@ -144,40 +159,17 @@ const Index = $.define("ibis-index", B => class Index extends B {
     const datalist = document.createElement("datalist");
     datalist.id = "index";
 
-    // const searchBox = document.createElement("input");
-    // searchBox.setAttribute("list", "index");
-    //
-    // const form = document.createElement("form");
-    // form.replaceChildren(searchBox, datalist);
-    // form.onsubmit = e => {
-    //   e.preventDefault();
-    //   openCard(searchBox.value);
-    // };
-    //
-    // this.replaceChildren(form, links);
+    for(let slug of await DP.list()) {
+      links.appendChild($.e("span", {
+        role: "button",
+        onclick: () => openCard(slug),
+      }, slug));
+      links.appendChild(document.createTextNode(" "));
+
+      datalist.appendChild($.e("option", { value: slug }));
+    }
+
     this.replaceChildren(links, datalist);
-
-    // this may take time, so we set up the elements first
-    const slugs = await DP.list();
-
-    const linkItems = slugs.map(slug => {
-      const item = document.createElement("a");
-      item.innerText = slug;
-      item.href = "##";
-      item.onclick = e => {
-        e.preventDefault();
-        openCard(slug);
-      };
-      return item;
-    });
-    links.replaceChildren(...linkItems);
-
-    const datalistItems = slugs.map(slug => {
-      const item = document.createElement("option");
-      item.value = slug;
-      return item;
-    });
-    datalist.replaceChildren(...datalistItems);
   }
 });
 

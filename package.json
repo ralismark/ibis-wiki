@@ -1,0 +1,22 @@
+{
+  "name": "ibis",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^19.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.0",
+    "rollup": "^2.48.0",
+    "rollup-plugin-terser": "^7.0.2"
+  },
+  "dependencies": {
+    "@codemirror/basic-setup": "^0.18.1",
+    "@codemirror/lang-javascript": "^0.18.0"
+  }
+}
