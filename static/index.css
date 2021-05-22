@@ -35,6 +35,11 @@ body {
 
 /* everything else */
 
+a, [role=button] {
+	color: blue;
+	cursor: pointer;
+}
+
 ibis-view > .CodeMirror {
 	height: auto;
 	margin: 1rem 0;
@@ -64,6 +69,13 @@ ibis-card {
 		overflow-wrap: anywhere;
 	}
 
+	ibis-card .card-button {
+		cursor: pointer;
+		float: right;
+		margin: 0 .2em;
+		text-decoration: none;
+	}
+
 	ibis-index > div > a {
 		margin: 0 .5em;
 	}
@@ -80,14 +92,35 @@ ibis-search input {
 	line-height: 1.5em;
 }
 
-	.cm-local-link {
-		cursor: pointer;
-	}
-
 	.CodeMirror .CodeMirror-line.h {
 		font-size: 1.3em !important;
 	}
 
 	.CodeMirror .CodeMirror-line.blockquote {
 		background-color: rgba(0, 123, 255, 0.1);
+	}
+
+	.CodeMirror .CodeMirror-line.preamble {
+		font-family: monospace;
+	}
+
+	.CodeMirror .CodeMirror-line.rest-is-mono,
+	.CodeMirror .CodeMirror-line.rest-is-mono ~ * {
+		font-family: monospace;
+	}
+
+	.CodeMirror .cm-codeblock {
+		font-family: monospace;
+	}
+
+	.CodeMirror .cm-link {
+		cursor: pointer;
+	}
+
+	.CodeMirror .cm-t-bold {
+		font-weight: bold;
+	}
+
+	.CodeMirror .cm-t-italics {
+		font-style: italic;
 	}
