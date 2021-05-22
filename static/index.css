@@ -49,7 +49,7 @@ ibis-card {
 	display: block;
 	border: 1px solid rgba(127, 127, 127, 0.4);
 	border-radius: 4px;
-	padding: 0 1rem;
+	padding: 0 1rem 1rem;
 	margin: 1rem 0;
 
 	transition: background 1s;
@@ -86,41 +86,3 @@ ibis-search input {
 	margin-bottom: 0.5rem;
 	border: 1px solid grey;
 }
-
-.CodeMirror {
-	font-family: sans-serif;
-	line-height: 1.5em;
-}
-
-	.CodeMirror .CodeMirror-line.h {
-		font-size: 1.3em !important;
-	}
-
-	.CodeMirror .CodeMirror-line.blockquote {
-		background-color: rgba(0, 123, 255, 0.1);
-	}
-
-	.CodeMirror .CodeMirror-line.preamble {
-		font-family: monospace;
-	}
-
-	.CodeMirror .CodeMirror-line.rest-is-mono,
-	.CodeMirror .CodeMirror-line.rest-is-mono ~ * {
-		font-family: monospace;
-	}
-
-	.CodeMirror .cm-codeblock {
-		font-family: monospace;
-	}
-
-	.CodeMirror .cm-link {
-		cursor: pointer;
-	}
-
-	.CodeMirror .cm-t-bold {
-		font-weight: bold;
-	}
-
-	.CodeMirror .cm-t-italics {
-		font-style: italic;
-	}
