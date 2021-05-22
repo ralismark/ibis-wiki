@@ -1,84 +1,93 @@
 "use strict";
 
-class DocumentProvider extends EventTarget {
-  constructor() {
-    super();
-
-    this.docs = {};
-  }
+const DP = (() => {
+  // imports
+  const {EditorState, Annotation} = CM.state;
+  const {EditorView, ViewPlugin} = CM.view;
 
   /*
-   * list the document names that currently exist
+   * Define the codemirror theme
    */
-  async list() {
-    return await api.list();
-  }
+  const theme = EditorView.baseTheme({
+    ".cm-content": {
+      fontFamily: "sans-serif",
+    },
+  });
 
   /*
-   * helper for open() to create a new (unnamed) document
+   * A plugin to synchronise multiple EditorViews
    */
-  async create(slug) {
-    const doc = CodeMirror.Doc("", "mdm");
-    const content = await api.load(slug);
+  function syncPlugin(slug) {
+    const listeners = new Set();
+    const downstream = Annotation.define(Boolean);
 
-    if(content === null) {
-      // underlying doesn't exist, so we do something special
-      const placeholder = "[click here to create document]";
-      doc.setValue(placeholder);
-      doc.markText({line:0, ch:0}, {line:0, ch:placeholder.length}, {
-        shared: true,
-        readOnly: true,
-        className: "cm-link cm-js-click cm-js-click-unlock",
+    const plugin = ViewPlugin.define((v) => {
+      listeners.add(v);
+      return {
+        update(viewupdate) {
+          // avoid update loops
+          if(viewupdate.changes.empty) return;
+          for(const tr of viewupdate.transactions) {
+            if(tr.annotation(downstream)) return;
+          }
 
-        inclusiveLeft: true,
-        inclusiveRight: true,
+          for(let other of listeners) if(other !== v) {
+            other.dispatch({
+              changes: viewupdate.changes,
+              annotations: downstream.of(true),
+            });
+          }
 
-        atomic: true,
-        selectLeft: false,
-        selectRight: false,
-      });
-    } else {
-      doc.setValue(content);
-    }
+          plugin.state = viewupdate.state;
+        },
 
-    let wasEmpty = content == null ? null : content == "";
-    let saving = false;
-    doc.on("change", async (_, event) => {
-      // TODO implement a better sync algo
-      console.log("change", event);
-
-      if(saving) return;
-      saving = true;
-      await $.sleep(SAVE_INTERVAL);
-
-      const content = doc.getValue();
-      await api.store(slug, content);
-      saving = false;
-
-      const isEmpty = content == "";
-      if(isEmpty != wasEmpty) {
-        console.log("empty status of", slug, ":", isEmpty, "<-", wasEmpty);
-        this.dispatchEvent(new Event("listchanged"));
-      }
-      wasEmpty = isEmpty;
+        destroy() {
+          listeners.delete(v);
+        },
+      };
     });
 
-    await $.sleep(FAKE_DELAY);
-    return doc;
+    return plugin;
   }
 
   /*
-   * open a new document
+   * Map from slugs to sync plugins
    */
-  async open(slug) {
-    if(!(slug in this.docs)) {
-      // doesn't exist, so create it
-      const doc = this.create(slug);
-      this.docs[slug] = doc;
-    }
-    const doc = await this.docs[slug];
-    return doc;
-  }
-};
+  const docs = {};
 
-const DP = new DocumentProvider();
+  /*
+   * Create a new document for the given slug
+   */
+  async function create(slug) {
+    const content = await api.load(slug) || "";
+
+    const sync = syncPlugin(slug);
+    sync.state = EditorState.create({
+      doc: content,
+      extensions: [CM.basicSetup, sync, theme],
+    });
+
+    // TODO saving
+    // TODO empty document placeholder
+
+    return sync;
+  }
+
+  return new class extends EventTarget {
+    get docs() {
+      return docs;
+    }
+
+    async list() {
+      return await api.list();
+    }
+
+    async open(slug) {
+      if(!(slug in this.docs)) {
+        // doesn't exist, so create it
+        docs[slug] = create(slug);
+      }
+      return (await this.docs[slug]).state;
+    }
+  };
+})();

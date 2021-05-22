@@ -9,10 +9,12 @@ function openCard(name) {
   name = name.trim();
 
   let targetCard = null;
-  for(let card of CARDBOX.querySelectorAll("ibis-card")) {
-    if(card.slug === name) {
-      targetCard = card;
-      break;
+  if(!DUPLICATE_CARDS) {
+    for(let card of CARDBOX.querySelectorAll("ibis-card")) {
+      if(card.slug === name) {
+        targetCard = card;
+        break;
+      }
     }
   }
 
@@ -36,59 +38,32 @@ const View = $.define("ibis-view", B => class View extends B {
   }
   set slug(val) { this.setAttribute("slug", val); }
 
-  get content() { return this.codemirror.getValue(); }
-  get doc() { return this.codemirror.getDoc(); }
-
   constructor(props) {
     super(props);
 
-    this.codemirror = CodeMirror(this, {
-      readOnly: true,
-      lineWrapping: true,
-      cursorBlinkRate: 0,
+    // import
+    const {EditorView} = CM.view;
+
+    this.view = new EditorView({
+      state: DP.pendingState,
+      parent: this,
     });
-    this.codemirror.getWrapperElement().classList.add("CodeMirror-readonly");
-
-    this.codemirror.on("mousedown", ({}, event) => {
-      const classList = event.target.classList;
-      if(!classList.contains("cm-js-click")) return;
-      if(event.button !== 0) return;
-      event.preventDefault();
-      event.codemirrorIgnore = true;
-
-      if(classList.contains("cm-js-click-opencard")) {
-        openCard(event.target.innerText.trim());
-      } else if(classList.contains("cm-js-click-unlock")) {
-        this.codemirror.getDoc().setValue("");
-      } else if(classList.contains("cm-js-click-openlink")) {
-        window.open(event.target.innerText.trim(), "_blank", "noopener,noreferrer");
-      }
-    });
-
-    this.load();
+    this.shownSlug = null;
   }
 
-  async load() {
-    this.setAttribute("loading", "1");
+  async doRender() {
     const slug = this.slug;
+    if(slug == this.shownSlug) return;
+
+    this.setAttribute("loading", "1");
     const rdoc = await DP.open(slug);
 
     // Only apply change if we actually need to
     if(this.slug === slug && this.shownSlug !== slug) {
       this.removeAttribute("loading");
-      this.codemirror.swapDoc(rdoc.linkedDoc({ sharedHist: true }));
-      this.codemirror.setOption("readOnly", false);
+      this.view.setState(rdoc);
       this.shownSlug = slug;
     }
-  }
-
-  doRender() {
-    if(this.slug !== this.shownSlug) {
-      // sync up the slug if needed
-      this.load();
-    }
-
-    this.codemirror.refresh();
   }
 });
 
