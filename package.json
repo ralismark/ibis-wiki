@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@codemirror/basic-setup": "^0.18.1",
-    "@codemirror/lang-javascript": "^0.18.0"
+    "@codemirror/lang-javascript": "^0.18.0",
+    "@codemirror/lang-markdown": "^0.18.3",
+    "lezer-generator": "^0.13.4"
   }
 }

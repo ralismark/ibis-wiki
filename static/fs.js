@@ -5,6 +5,9 @@ const DP = (() => {
   const {EditorState, Annotation} = CM.state;
   const {EditorView, ViewPlugin} = CM.view;
 
+  // pre-declare
+  let output;
+
   /*
    * Define the codemirror theme
    */
@@ -21,7 +24,32 @@ const DP = (() => {
     const listeners = new Set();
     const downstream = Annotation.define(Boolean);
 
-    const plugin = ViewPlugin.define((v) => {
+    let plugin;
+    let syncing = false;
+    let syncedState = null;
+
+    async function sync() {
+      if(!plugin.state) return;
+
+      if(syncing) return;
+      syncing = true;
+      await $.sleep(SAVE_INTERVAL);
+
+      const content = plugin.state.doc.toString();
+      syncing = false;
+      await api.store(slug, content);
+
+      console.log("sync", slug, syncedState, plugin.state.doc);
+      if(syncedState === null
+        || (syncedState.length === 0) !== (plugin.state.doc.length === 0)) {
+        // empty <-> nonempty transition
+        output.dispatchEvent(new Event("listchanged"));
+      }
+
+      syncedState = plugin.state.doc;
+    }
+
+    plugin = ViewPlugin.define((v) => {
       listeners.add(v);
       return {
         update(viewupdate) {
@@ -39,6 +67,7 @@ const DP = (() => {
           }
 
           plugin.state = viewupdate.state;
+          sync();
         },
 
         destroy() {
@@ -64,16 +93,15 @@ const DP = (() => {
     const sync = syncPlugin(slug);
     sync.state = EditorState.create({
       doc: content,
-      extensions: [CM.basicSetup, sync, theme],
+      extensions: [CM.basicSetup, CM.filetype(), sync, theme],
     });
 
-    // TODO saving
     // TODO empty document placeholder
 
     return sync;
   }
 
-  return new class extends EventTarget {
+  output = new class extends EventTarget {
     get docs() {
       return docs;
     }
@@ -90,4 +118,6 @@ const DP = (() => {
       return (await this.docs[slug]).state;
     }
   };
+
+  return output;
 })();

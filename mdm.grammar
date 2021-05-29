@@ -1,0 +1,76 @@
+// https://lezer.codemirror.net/docs/guide/
+
+@precedence { high, low }
+
+@top Document {
+	Preamble?
+	(line? "\n")* line?
+}
+
+Preamble {
+	!high Hr "\n" (blockany* "\n")* Hr "\n"
+}
+
+line {
+	Header { ATXMeta any* }
+	| Blockquote { BlockquoteMeta content }
+	| Codeblock { CodeblockFence (blockany* "\n")+ CodeblockFence }
+	| !low Hr
+	| content
+}
+
+content {
+	(!low special | any)* !high
+}
+
+special {
+	Ref { RefOpen RefIdent? RefClose }
+	| CodeSpan { CodespanMeta any* CodespanMeta }
+	| Star inS1
+	| Starstar inS2
+	| Ang { AngOpen AngIdent { any* } AngClose }
+}
+
+inS1 {
+	S1 { content } (Star | Starstar inS3)
+}
+
+inS2 {
+	S2 { content } (Starstar | Star inS3)
+}
+
+inS3 {
+	S1 { S2 { content } } (Star inS2 | Starstar inS1)
+}
+
+@tokens {
+
+	// Block-level things
+
+	ATXMeta { "#"+ }
+	BlockquoteMeta { ">" }
+	Hr { "---" }
+	CodeblockFence { "```" }
+	blockany { ![\n] }
+	
+	@precedence { ATXMeta, Hr, BlockquoteMeta, CodeblockFence, blockany, any }
+
+	// Span-level things
+
+	CodespanMeta[openedBy="CodespanMeta", closedBy="CodespanMeta"] { "`" }
+
+	Star[openedBy="Star", closedBy="Star"] { "*" }
+	Starstar[openedBy="Starstar", closedBy="Starstar"] { "**" }
+
+	AngOpen[closedBy="AngClose"] { "<" }
+	AngClose[openedBy="AngOpen"] { ">" }
+
+	RefIdent { $[A-Za-z0-9_ -]+ }
+	RefOpen[closedBy="RefClose"] { "[[" }
+	RefClose[openedBy="RefOpen"] { "]]" }
+
+	any { ![\n] }
+
+	@precedence { CodespanMeta, Starstar, Star, AngOpen, AngClose, RefOpen, RefClose, any }
+
+}
