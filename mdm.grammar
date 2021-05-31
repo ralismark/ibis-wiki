@@ -3,8 +3,12 @@
 @precedence { high, low }
 
 @top Document {
-	Preamble?
-	(line? "\n")* line?
+	(
+		Codeblock { modeline ("\n" any*)* }
+	) | (
+		Preamble?
+		(line? "\n")* line?
+	)
 }
 
 Preamble {
@@ -25,7 +29,7 @@ content {
 
 special {
 	Ref { RefOpen RefIdent? RefClose }
-	| CodeSpan { CodespanMeta any* CodespanMeta }
+	| CodeSpan { CodeSpanMeta any* CodeSpanMeta }
 	| Star inS1
 	| Starstar inS2
 	| Ang { AngOpen AngIdent { any* } AngClose }
@@ -40,7 +44,7 @@ inS2 {
 }
 
 inS3 {
-	S1 { S2 { content } } (Star inS2 | Starstar inS1)
+	S3 { content } (Star inS2 | Starstar inS1)
 }
 
 @tokens {
@@ -51,13 +55,14 @@ inS3 {
 	BlockquoteMeta { ">" }
 	Hr { "---" }
 	CodeblockFence { "```" }
+	modeline { ![\n]* "vim: ft=" ![\n]* }
 	blockany { ![\n] }
 	
-	@precedence { ATXMeta, Hr, BlockquoteMeta, CodeblockFence, blockany, any }
+	@precedence { modeline, ATXMeta, Hr, BlockquoteMeta, CodeblockFence, blockany, any }
 
 	// Span-level things
 
-	CodespanMeta[openedBy="CodespanMeta", closedBy="CodespanMeta"] { "`" }
+	CodeSpanMeta[openedBy="CodeSpanMeta", closedBy="CodeSpanMeta"] { "`" }
 
 	Star[openedBy="Star", closedBy="Star"] { "*" }
 	Starstar[openedBy="Starstar", closedBy="Starstar"] { "**" }
@@ -71,6 +76,6 @@ inS3 {
 
 	any { ![\n] }
 
-	@precedence { CodespanMeta, Starstar, Star, AngOpen, AngClose, RefOpen, RefClose, any }
+	@precedence { modeline, CodeSpanMeta, Starstar, Star, AngOpen, AngClose, RefOpen, RefClose, any }
 
 }

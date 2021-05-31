@@ -86,3 +86,9 @@ ibis-search input {
 	margin-bottom: 0.5rem;
 	border: 1px solid grey;
 }
+
+.cm-link {
+	color: #0000ff;
+	text-decoration: underline;
+	cursor: pointer;
+}

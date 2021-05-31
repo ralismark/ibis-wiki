@@ -4,12 +4,16 @@
 Server for project ibis
 """
 
+import sys
 import os
 import flask
 import werkzeug.exceptions as werr
 from flask import request
 
 app = flask.Flask(__name__)
+
+DEBUG = bool(os.getenv("IBIS_DEBUG"))
+DATA_ROOT = os.getenv("IBIS_DATA_ROOT", "data")
 
 def safe_join(*args):
     """
@@ -32,14 +36,14 @@ def data_load(path: str):
     """
     Fetch the contents of a file
     """
-    return flask.send_from_directory("data", path)
+    return flask.send_from_directory(DATA_ROOT, path)
 
 @app.route("/api/data/<path:path>", methods=["PUT"])
 def data_store(path: str):
     """
     Fetch the contents of a file
     """
-    path = safe_join("data", path)
+    path = safe_join(DATA_ROOT, path)
     if path is None:
         return "Not a valid path", 400
 
@@ -68,7 +72,10 @@ def api_list():
     """
     Get a list of all entries
     """
-    return flask.jsonify(os.listdir("data"))
+    return flask.jsonify(os.listdir(DATA_ROOT))
+
+def main():
+    app.run(debug=DEBUG, host="0.0.0.0", port=4001)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=4001)
+    main()
