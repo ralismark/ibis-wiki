@@ -3,7 +3,9 @@
 const DP = (() => {
   // imports
   const {EditorState, Annotation} = CM.state;
-  const {EditorView, ViewPlugin} = CM.view;
+  const {EditorView, ViewPlugin, WidgetType} = CM.view;
+  const {HighlightStyle, tags} = CM.highlight;
+  const {tx} = CM;
 
   // pre-declare
   let output;
@@ -18,6 +20,65 @@ const DP = (() => {
   });
 
   /*
+   * Define highlight style
+   */
+
+  function expandCombiners(items, base) {
+    if(items.length === 0) return base;
+    const rest = expandCombiners(items.slice(1), base);
+    const extend = rule => ({
+      ...rule,
+      ...items[0],
+      tag: items[0].tag(rule.tag),
+    });
+    return rest.concat(rest.map(extend));
+  }
+
+  const highlight = HighlightStyle.define([
+    // formatting
+    ...expandCombiners([
+      {tag: tx.withEm, fontStyle: "italic"},
+      {tag: tx.withStrong, fontWeight: "bold"},
+    ], [
+      {tag: tags.content},
+    ]),
+
+    // meta tags
+    ...expandCombiners([
+      {tag: tx.metaFor, color: "rgba(127, 127, 127)"},
+    ], [
+      {tag: tags.content},
+      {tag: tags.heading, fontSize: "1.5em"},
+      {tag: tags.monospace, fontFamily: "monospace"},
+      {tag: tags.quote},
+    ]),
+    {tag: tags.meta, color: "rgba(127, 127, 127)"},
+    {tag: tags.punctuation, color: "rgba(127, 127, 127)"},
+
+    {tag: tags.link, class: "cm-link"},
+    {tag: tx.refLink, class: "cm-link cm-js-reflink"},
+    {tag: tx.urlLink, class: "cm-link cm-js-urllink"},
+
+  ]);
+
+  /*
+   * Clickable links
+   */
+  const linkPlugin = EditorView.domEventHandlers({
+    mousedown(e, view) {
+      const classes = e.target.classList;
+      if(classes.contains("cm-js-reflink")) {
+        openCard(e.target.innerText.trim());
+      } else if(classes.contains("cm-js-urllink")) {
+        window.open(e.target.innerText.trim(), "_blank", "noopener,noreferrer");
+      } else {
+        return false;
+      }
+      return true;
+    }
+  });
+
+  /*
    * A plugin to synchronise multiple EditorViews
    */
   function syncPlugin(slug) {
@@ -25,29 +86,36 @@ const DP = (() => {
     const downstream = Annotation.define(Boolean);
 
     let plugin;
-    let syncing = false;
+    let syncing = "";
     let syncedState = null;
 
-    async function sync() {
+    async function syncnow() {
       if(!plugin.state) return;
-
-      if(syncing) return;
-      syncing = true;
-      await $.sleep(SAVE_INTERVAL);
-
       const content = plugin.state.doc.toString();
-      syncing = false;
-      await api.store(slug, content);
+      if(syncing != "waiting") return;
+      syncing = "inprogress";
 
-      console.log("sync", slug, syncedState, plugin.state.doc);
-      if(syncedState === null
-        || (syncedState.length === 0) !== (plugin.state.doc.length === 0)) {
-        // empty <-> nonempty transition
-        output.dispatchEvent(new Event("listchanged"));
+      try {
+        await api.store(slug, content);
+
+        console.log("sync", slug, syncedState, plugin.state.doc);
+        if(syncedState === null
+          || (syncedState.length === 0) !== (plugin.state.doc.length === 0)) {
+          // empty <-> nonempty transition
+          output.dispatchEvent(new Event("listchanged"));
+        }
+
+        syncedState = plugin.state.doc;
+      } finally {
+        syncing = "";
       }
-
-      syncedState = plugin.state.doc;
     }
+
+    document.addEventListener("visibilitychange", async () => {
+      if(document.visibilityState == "hidden") {
+        await syncnow();
+      }
+    });
 
     plugin = ViewPlugin.define((v) => {
       listeners.add(v);
@@ -67,7 +135,11 @@ const DP = (() => {
           }
 
           plugin.state = viewupdate.state;
-          sync();
+
+          // do sync
+          if(syncing) return;
+          syncing = "waiting";
+          $.sleep(SAVE_INTERVAL).then(syncnow);
         },
 
         destroy() {
@@ -93,7 +165,7 @@ const DP = (() => {
     const sync = syncPlugin(slug);
     sync.state = EditorState.create({
       doc: content,
-      extensions: [CM.basicSetup, CM.filetype(), sync, theme],
+      extensions: [linkPlugin, highlight, CM.filetype(), sync, theme, CM.basicSetup],
     });
 
     // TODO empty document placeholder

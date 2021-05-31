@@ -1,6 +1,7 @@
 import * as state from "@codemirror/state"
 import * as view from "@codemirror/view"
 import * as commands from "@codemirror/commands"
+import * as highlight from "@codemirror/highlight"
 
 // our own basic setup
 import {EditorView, keymap, highlightSpecialChars, drawSelection, highlightActiveLine} from "@codemirror/view"
@@ -13,7 +14,7 @@ import {defaultHighlightStyle} from "@codemirror/highlight"
 // our own parser
 import {parser} from "./mdm.grammar"
 import {LezerLanguage, LanguageSupport} from "@codemirror/language"
-import {styleTags, tags as t} from "@codemirror/highlight"
+import {styleTags, tags as t, Tag} from "@codemirror/highlight"
 
 import {stringInput} from "lezer-tree"
 
@@ -86,32 +87,45 @@ function longParse(str) {
   return printTree(parsed, str);
 }
 
+const tx = {
+  metaFor: Tag.defineModifier(),
+  withStrong: Tag.defineModifier(),
+  withEm: Tag.defineModifier(),
+  refLink: Tag.define(t.link),
+  urlLink: Tag.define(t.link),
+};
+
 const lang = LezerLanguage.define({
   parser: parser.configure({
     props: [
       styleTags({
         Preamble: t.monospace,
 
-        Header: t.heading1,
-        ATXMeta: t.meta,
+        Header: t.heading,
+        ATXMeta: tx.metaFor(t.heading),
 
         Blockquote: t.quote,
-        BlockquoteMeta: t.meta,
+        BlockquoteMeta: tx.metaFor(t.quote),
 
         Codeblock: t.monospace,
-        CodeblockFence: t.meta,
+        CodeblockFence: tx.metaFor(t.monospace),
         CodeSpan: t.monospace,
+        CodeSpanMeta: tx.metaFor(t.monospace),
 
-        S1: t.emphasis,
-        S2: t.strong,
+        S1: tx.withEm(t.content),
+        S2: tx.withStrong(t.content),
+        S3: tx.withStrong(tx.withEm(t.content)),
 
-        // RefOpen: t.meta,
-        // RefClose: t.meta,
-        RefIdent: t.link,
+        Star: t.punctuation,
+        Starstar: t.punctuation,
 
-        // AngOpen: t.meta,
-        // AngClose: t.meta,
-        AngIdent: t.link,
+        RefOpen: t.squareBracket,
+        RefClose: t.squareBracket,
+        RefIdent: tx.refLink,
+
+        AngOpen: t.angleBracket,
+        AngClose: t.angleBracket,
+        AngIdent: tx.urlLink,
       }),
     ],
   }),
@@ -130,6 +144,8 @@ window.CM = {
   commands,
   filetype,
   longParse,
+  highlight,
+  tx,
   basicSetup: [
     highlightSpecialChars(),
     history(),
