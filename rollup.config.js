@@ -4,7 +4,7 @@ import {lezer} from "lezer-generator/rollup"
 export default {
   input: "./main.js",
   output: {
-    file: "./static/bundle.js",
+    file: "./build/bundle.js",
     format: "iife"
   },
   plugins: [lezer(), nodeResolve()]

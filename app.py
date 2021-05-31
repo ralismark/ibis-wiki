@@ -31,6 +31,13 @@ def index():
     """
     return flask.redirect("/static/index.html")
 
+@app.route("/build/<path:path>")
+def static_build(path: str):
+    """
+    Build artifacts
+    """
+    return flask.send_from_directory("build", path)
+
 @app.route("/api/data/<path:path>")
 def data_load(path: str):
     """
