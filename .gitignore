@@ -1,4 +1,4 @@
 __pycache__/
 node_modules/
 data/
-static/bundle.js
+build/
