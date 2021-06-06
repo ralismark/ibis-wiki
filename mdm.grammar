@@ -70,7 +70,7 @@ inS3 {
 	AngOpen[closedBy="AngClose"] { "<" }
 	AngClose[openedBy="AngOpen"] { ">" }
 
-	RefIdent { $[A-Za-z0-9_ -]+ }
+	RefIdent { $[A-Za-z0-9_ .-]+ }
 	RefOpen[closedBy="RefClose"] { "[[" }
 	RefClose[openedBy="RefOpen"] { "]]" }
 
