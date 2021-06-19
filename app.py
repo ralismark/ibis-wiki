@@ -11,6 +11,7 @@ import werkzeug.exceptions as werr
 from flask import request
 
 app = flask.Flask(__name__)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 DEBUG = bool(os.getenv("IBIS_DEBUG"))
 DATA_ROOT = os.getenv("IBIS_DATA_ROOT", "data")
