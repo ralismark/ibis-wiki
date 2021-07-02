@@ -4,9 +4,9 @@
 Server for project ibis
 """
 
-import sys
 import os
 import flask
+from werkzeug.utils import safe_join as w_safe_join
 import werkzeug.exceptions as werr
 from flask import request
 
@@ -16,14 +16,16 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 DEBUG = bool(os.getenv("IBIS_DEBUG"))
 DATA_ROOT = os.getenv("IBIS_DATA_ROOT", "data")
 
+
 def safe_join(*args):
     """
     Safely join paths
     """
     try:
-        return flask.safe_join(*args)
+        return w_safe_join(*args)
     except werr.NotFound:
         return None
+
 
 @app.route("/")
 def index():
@@ -32,6 +34,7 @@ def index():
     """
     return flask.redirect("/static/index.html")
 
+
 @app.route("/build/<path:path>")
 def static_build(path: str):
     """
@@ -39,12 +42,14 @@ def static_build(path: str):
     """
     return flask.send_from_directory("build", path)
 
+
 @app.route("/api/data/<path:path>")
 def data_load(path: str):
     """
     Fetch the contents of a file
     """
     return flask.send_from_directory(DATA_ROOT, path)
+
 
 @app.route("/api/data/<path:path>", methods=["PUT"])
 def data_store(path: str):
@@ -75,6 +80,7 @@ def data_store(path: str):
 
     return "", 204
 
+
 @app.route("/api/list")
 def api_list():
     """
@@ -82,8 +88,10 @@ def api_list():
     """
     return flask.jsonify(os.listdir(DATA_ROOT))
 
+
 def main():
     app.run(debug=DEBUG, host="0.0.0.0", port=4001)
+
 
 if __name__ == "__main__":
     main()

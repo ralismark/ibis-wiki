@@ -13,7 +13,7 @@ import {defaultHighlightStyle} from "@codemirror/highlight"
 
 // our own parser
 import {parser} from "./mdm.grammar"
-import {LezerLanguage, LanguageSupport} from "@codemirror/language"
+import {LezerLanguage, LanguageSupport, indentService} from "@codemirror/language"
 import {styleTags, tags as t, Tag} from "@codemirror/highlight"
 
 import {stringInput} from "lezer-tree"
@@ -160,5 +160,6 @@ window.CM = {
       ...defaultKeymap,
       ...historyKeymap,
     ]),
+    indentService.of(() => 0), // no indent
   ],
 };
