@@ -6,7 +6,6 @@ Server for project ibis
 
 import os
 import flask
-from werkzeug.utils import safe_join as w_safe_join
 import werkzeug.exceptions as werr
 from flask import request
 
@@ -22,7 +21,7 @@ def safe_join(*args):
     Safely join paths
     """
     try:
-        return w_safe_join(*args)
+        return flask.safe_join(*args)
     except werr.NotFound:
         return None
 
