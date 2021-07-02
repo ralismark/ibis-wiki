@@ -107,6 +107,8 @@ const DP = (() => {
 
         syncedState = plugin.state.doc;
       } finally {
+        // must be a "inprogress" -> "" transition
+        document.body.setAttribute("ibis-syncing", +document.body.getAttribute("ibis-syncing") - 1);
         syncing = "";
       }
     }
@@ -139,6 +141,8 @@ const DP = (() => {
           // do sync
           if(syncing) return;
           syncing = "waiting";
+          // must be a "" -> "waiting" transition
+          document.body.setAttribute("ibis-syncing", +document.body.getAttribute("ibis-syncing") + 1);
           $.sleep(SAVE_INTERVAL).then(syncnow);
         },
 
