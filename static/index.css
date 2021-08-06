@@ -10,6 +10,7 @@ html, body, div {
 }
 
 html {
+	padding-top: 1em;
 	padding-bottom: 100vh;
 }
 
