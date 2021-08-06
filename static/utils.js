@@ -66,8 +66,12 @@ const $ = (() => {
    */
   $.e = function(tag, attr, ...ch) {
     const elem = document.createElement(tag);
-    Object.entries(attr).forEach(kv => {
-      if(kv[0].startsWith("on")) {
+    Object.entries(attr || {}).forEach(kv => {
+      if(kv[0] === "style" && typeof(kv[1]) == "object") {
+        Object.entries(kv[1]).forEach(st => {
+          elem.style[st[0]] = st[1];
+        });
+      } else if(kv[0].startsWith("on")) {
         elem.addEventListener(kv[0].substr(2), kv[1]);
       } else {
         elem.setAttribute(kv[0], kv[1])
@@ -118,6 +122,14 @@ const $ = (() => {
       on: on,
     };
   };
+
+  /*
+   * Load js file
+   */
+  $.import = function(url) {
+    let script = $.e("script", {src: url});
+    document.body.appendChild(script);
+  }
 
   return $;
 
