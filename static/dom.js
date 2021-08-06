@@ -144,6 +144,11 @@ const Datalist = $.define("ibis-datalist", B => class Datalist extends B {
  * A search bar element that allows you to also open new documents
  */
 const Search = $.define("ibis-search", B => class Search extends B {
+  constructor(props) {
+    super(props);
+    this.style.display = "block";
+  }
+
   async doRender() {
     const searchBox = document.createElement("input");
     searchBox.setAttribute("list", "index");

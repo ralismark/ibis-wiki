@@ -27,9 +27,8 @@ ibis-view
 	margin: 1rem 0;
 }
 
-body {
+body > * {
 	max-width: 600px;
-	padding: 1rem;
 	margin: 0 auto;
 }
 
