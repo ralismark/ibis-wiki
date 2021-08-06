@@ -123,14 +123,6 @@ const $ = (() => {
     };
   };
 
-  /*
-   * Load js file
-   */
-  $.import = function(url) {
-    let script = $.e("script", {src: url});
-    document.body.appendChild(script);
-  }
-
   return $;
 
 })();
