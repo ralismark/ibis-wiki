@@ -177,13 +177,17 @@ const DP = (() => {
     return sync;
   }
 
+  /* Index provider */
+  let index_promise = api.list(); // promise with the latest index
+
   output = new class extends EventTarget {
     get docs() {
       return docs;
     }
 
-    async list() {
-      return await api.list();
+    async list(force=false) {
+      if(force) index_promise = api.list();
+      return await index_promise;
     }
 
     async open(slug) {
@@ -194,6 +198,11 @@ const DP = (() => {
       return (await this.docs[slug]).state;
     }
   };
+
+  output.addEventListener("listchanged", () => {
+    index_promise = api.list();
+    console.log("listchanged", index_promise);
+  });
 
   return output;
 })();
