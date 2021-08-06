@@ -122,7 +122,7 @@ const Card = $.define("ibis-card", B => class Card extends B {
   render() {}
 });
 
-const Index = $.define("ibis-index", B => class Index extends B {
+const Datalist = $.define("ibis-datalist", B => class Datalist extends B {
   constructor(props) {
     super(props);
 
@@ -130,21 +130,13 @@ const Index = $.define("ibis-index", B => class Index extends B {
   }
 
   async doRender() {
-    const links = document.createElement("div");
-    const datalist = document.createElement("datalist");
-    datalist.id = "index";
+    const datalist = $.e("datalist", {id: "index"});
 
     for(let slug of await DP.list()) {
-      links.appendChild($.e("span", {
-        role: "button",
-        onclick: () => openCard(slug),
-      }, slug));
-      links.appendChild(document.createTextNode(" "));
-
-      datalist.appendChild($.e("option", { value: slug }));
+      datalist.appendChild($.e("option", {value: slug}));
     }
 
-    this.replaceChildren(links, datalist);
+    this.replaceChildren(datalist);
   }
 });
 
