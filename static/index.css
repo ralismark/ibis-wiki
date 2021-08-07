@@ -35,7 +35,7 @@ body > * {
 
 /* everything else */
 
-body[ibis-syncing]:not([ibis-syncing="0"])::before {
+body[ibis-syncing]:not([ibis-syncing=""])::before {
 	content: "";
 
 	display: block;

@@ -78,6 +78,8 @@ const DP = (() => {
     }
   });
 
+  const syncingSlugs = new Set();
+
   /*
    * A plugin to synchronise multiple EditorViews
    */
@@ -86,19 +88,20 @@ const DP = (() => {
     const downstream = Annotation.define(Boolean);
 
     let plugin;
-    let syncing = "";
+    let syncStage = ""; // "" or "requested" or "in-progress"
     let syncedState = null;
 
     async function syncnow() {
       if(!plugin.state) return;
-      const content = plugin.state.doc.toString();
-      if(syncing != "waiting") return;
-      syncing = "inprogress";
 
       try {
+        const content = plugin.state.doc.toString();
+        console.log("[sync]", slug, "-", syncStage, "-> in-progress");
+        syncStage = "in-progress";
+
         await api.store(slug, content);
 
-        console.log("sync", slug, syncedState, plugin.state.doc);
+        console.log("[sync]", slug, "- api call done", syncedState, plugin.state.doc);
         if(syncedState === null
           || (syncedState.length === 0) !== (plugin.state.doc.length === 0)) {
           // empty <-> nonempty transition
@@ -107,9 +110,31 @@ const DP = (() => {
 
         syncedState = plugin.state.doc;
       } finally {
-        // must be a "inprogress" -> "" transition
-        document.body.setAttribute("ibis-syncing", +document.body.getAttribute("ibis-syncing") - 1);
-        syncing = "";
+        if(syncStage === "in-progress") {
+          // no further requests i.e. in-progress -> empty
+          console.log("[sync]", slug, "-", syncStage, "-> <empty>");
+          syncStage = "";
+
+          syncingSlugs.delete(slug);
+          document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
+        } else {
+          // got update while we were syncing -- sync again
+          await syncnow();
+        }
+      }
+    }
+
+    function wantsync() {
+      const oldSyncStage = syncStage;
+      console.log("[sync]", slug, "-", syncStage, "-> requested");
+      syncStage = "requested";
+
+      syncingSlugs.add(slug);
+      document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
+
+      if(oldSyncStage === "") {
+        // don't have scheduled sync
+        $.sleep(SAVE_INTERVAL).then(syncnow);
       }
     }
 
@@ -139,11 +164,7 @@ const DP = (() => {
           plugin.state = viewupdate.state;
 
           // do sync
-          if(syncing) return;
-          syncing = "waiting";
-          // must be a "" -> "waiting" transition
-          document.body.setAttribute("ibis-syncing", +document.body.getAttribute("ibis-syncing") + 1);
-          $.sleep(SAVE_INTERVAL).then(syncnow);
+          wantsync();
         },
 
         destroy() {
@@ -201,7 +222,7 @@ const DP = (() => {
 
   output.addEventListener("listchanged", () => {
     index_promise = api.list();
-    console.log("listchanged", index_promise);
+    console.log("[index]", "listchanged", index_promise);
   });
 
   return output;
