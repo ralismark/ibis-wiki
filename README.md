@@ -20,7 +20,7 @@ Ibis-wiki will also load `init.js` from the data folder when you load the wiki, 
 
 To run the website, you'll need python.
 First, install dependencies with `pip install -r requirements.txt` (possibly in a virtual environment -- `python3 -m ven venv && . ./venv/bin/activate`).
-Then, you can run `app.py` to start the server on port 4001.
+Then, you can run `app.py` to start the server on port 4001, with the main wiki reachable at `http://localhost:4001/static/index.html`.
 
 ## Design Notes
 
