@@ -26,14 +26,6 @@ def safe_join(*args):
         return None
 
 
-@app.route("/")
-def index():
-    """
-    Redirect to index page
-    """
-    return flask.redirect("/static/index.html")
-
-
 @app.route("/build/<path:path>")
 def static_build(path: str):
     """
