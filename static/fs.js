@@ -1,11 +1,115 @@
 "use strict";
 
+const Language = (() => {
+
+  // imports
+  const {md} = CM;
+  const {styleTags, HighlightStyle, Tag} = CM.highlight;
+  const t = CM.highlight.tags;
+
+  const RefLinkDelim = { resolve: "RefLink", mark: "RefLinkMark" };
+  const RefLink = {
+    defineNodes: ["RefLink", "RefLinkMark"],
+    parseInline: [{
+      name: "reflink",
+      before: "Link",
+      parse(cx, next, pos) {
+        if(next == 91 /* [ */ && cx.char(pos + 1) == 91)
+          return cx.addDelimiter(RefLinkDelim, pos, pos + 2, true, false);
+        if(next == 93 /* ] */ && cx.char(pos + 1) == 93)
+          return cx.addDelimiter(RefLinkDelim, pos, pos + 2, false, true);
+        return -1;
+      }
+    }],
+  }
+
+  // new tags
+  const tx = {
+    refLink: Tag.define(t.link),
+    urlLink: Tag.define(t.link),
+
+    ulMark: Tag.define(t.annotation),
+    olMark: Tag.define(t.annotation),
+  };
+
+  const tagSpec = {
+    // special bits
+    RefLinkMark: t.squareBracket,
+    RefLink: tx.refLink,
+    URL: tx.urlLink,
+
+    // formatting
+    "Emphasis/...": t.emphasis,
+    "StrongEmphasis/...": t.strong,
+    EmphasisMark: t.punctuation,
+    "Strikethrough/...": t.strikethrough,
+    StrikethroughMark: t.punctuation,
+
+    // headings
+    HeaderMark: t.punctuation,
+    "ATXHeading1/... SetextHeading1/...": t.heading1,
+    "ATXHeading2/... SetextHeading2/...": t.heading2,
+    "ATXHeading3/...": t.heading3,
+    "ATXHeading4/...": t.heading4,
+    "ATXHeading5/...": t.heading5,
+    "ATXHeading6/...": t.heading6,
+
+    // lists
+    "BulletList/ListIem/ListMark": tx.ulMark,
+    "OrderedList/ListIem/ListMark": tx.olMark,
+    "ListItem/...": t.list,
+
+    // codeblocks
+    CodeMark: t.punctuation,
+    "InlineCode FencedCode CodeText": t.monospace,
+    CodeInfo: t.labelName, // TODO(2021-11-03) is this the right tag?
+
+    // misc things
+    HorizontalRule: t.contentSeparator,
+    "Blockquote/...": t.quote,
+    QuoteMark: t.punctuation,
+  };
+
+  const parser = md.parser.configure([
+    md.Strikethrough,
+    RefLink,
+    {props: [styleTags(tagSpec)]},
+  ]);
+  window.showParse = x => CM.longParse(parser, x);
+
+  return [
+    CM.makeLang({
+      parser: parser,
+      languageData: {},
+    }),
+    HighlightStyle.define([
+      // fallbacks
+      {tag: t.punctuation, color: "rgb(127.5, 127.5, 127.5)"},
+
+      {tag: tx.refLink, class: "cm-link cm-js-reflink"},
+      {tag: tx.urlLink, class: "cm-link cm-js-urllink"},
+
+      // standard formatting tags
+      {tag: t.emphasis, fontStyle: "italic"},
+      {tag: t.strong, fontWeight: "bold"},
+      {tag: t.monospace, fontFamily: "monospace"},
+      {tag: t.strikethrough, textDecoration: "line-through"},
+
+      // headings
+      {tag: t.heading1, fontSize: "1.5em"},
+      {tag: t.heading2, fontSize: "1.4em"},
+      {tag: t.heading3, fontSize: "1.3em"},
+      {tag: t.heading, fontSize: "1.2em"},
+    ]),
+  ]
+
+})();
+
 const DP = (() => {
   // imports
   const {EditorState, Annotation} = CM.state;
   const {EditorView, ViewPlugin, WidgetType} = CM.view;
   const {HighlightStyle, tags} = CM.highlight;
-  const {tx} = CM;
 
   // pre-declare
   let output;
@@ -20,48 +124,6 @@ const DP = (() => {
   });
 
   /*
-   * Define highlight style
-   */
-
-  function expandCombiners(items, base) {
-    if(items.length === 0) return base;
-    const rest = expandCombiners(items.slice(1), base);
-    const extend = rule => ({
-      ...rule,
-      ...items[0],
-      tag: items[0].tag(rule.tag),
-    });
-    return rest.concat(rest.map(extend));
-  }
-
-  const highlight = HighlightStyle.define([
-    // formatting
-    ...expandCombiners([
-      {tag: tx.withEm, fontStyle: "italic"},
-      {tag: tx.withStrong, fontWeight: "bold"},
-    ], [
-      {tag: tags.content},
-    ]),
-
-    // meta tags
-    ...expandCombiners([
-      {tag: tx.metaFor, color: "rgba(127, 127, 127)"},
-    ], [
-      {tag: tags.content},
-      {tag: tags.heading, fontSize: "1.5em"},
-      {tag: tags.monospace, fontFamily: "monospace"},
-      {tag: tags.quote},
-    ]),
-    {tag: tags.meta, color: "rgba(127, 127, 127)"},
-    {tag: tags.punctuation, color: "rgba(127, 127, 127)"},
-
-    {tag: tags.link, class: "cm-link"},
-    {tag: tx.refLink, class: "cm-link cm-js-reflink"},
-    {tag: tx.urlLink, class: "cm-link cm-js-urllink"},
-
-  ]);
-
-  /*
    * Clickable links
    */
   const linkPlugin = EditorView.domEventHandlers({
@@ -70,7 +132,7 @@ const DP = (() => {
       if(classes.contains("cm-js-reflink")) {
         openCard(e.target.innerText.trim());
       } else if(classes.contains("cm-js-urllink")) {
-        window.open(e.target.innerText.trim(), "_blank", "noopener,noreferrer");
+        window.open(e.target.innerText.replace(/^\s*<\s*|\s*>\s*$/g, ""), "_blank", "noopener,noreferrer");
       } else {
         return false;
       }
@@ -190,7 +252,7 @@ const DP = (() => {
     const sync = syncPlugin(slug);
     sync.state = EditorState.create({
       doc: content,
-      extensions: [linkPlugin, highlight, CM.filetype(), sync, theme, CM.basicSetup],
+      extensions: [linkPlugin, Language, sync, theme, CM.basicSetup],
     });
 
     // TODO empty document placeholder
