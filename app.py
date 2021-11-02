@@ -5,9 +5,12 @@ Server for project ibis
 """
 
 import os
+import mimetypes
 import flask
 import werkzeug.exceptions as werr
 from flask import request
+
+mimetypes.init()
 
 app = flask.Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
@@ -39,7 +42,10 @@ def data_load(path: str):
     """
     Fetch the contents of a file
     """
-    return flask.send_from_directory(DATA_ROOT, path)
+    mtype, _ = mimetypes.guess_type(path)
+    if mtype is None:
+        mtype = "text/plain"
+    return flask.send_from_directory(DATA_ROOT, path, mimetype=mtype)
 
 
 @app.route("/api/data/<path:path>", methods=["PUT"])
