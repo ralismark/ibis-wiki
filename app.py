@@ -29,12 +29,19 @@ def safe_join(*args):
         return None
 
 
+def send_with_mime(base, path):
+    mtype, _ = mimetypes.guess_type(path)
+    if mtype is None:
+        mtype = "text/plain"
+    return flask.send_from_directory(base, path, mimetype=mtype)
+
+
 @app.route("/build/<path:path>")
 def static_build(path: str):
     """
     Build artifacts
     """
-    return flask.send_from_directory("build", path)
+    return send_with_mime("build", path)
 
 
 @app.route("/api/data/<path:path>")
@@ -42,10 +49,7 @@ def data_load(path: str):
     """
     Fetch the contents of a file
     """
-    mtype, _ = mimetypes.guess_type(path)
-    if mtype is None:
-        mtype = "text/plain"
-    return flask.send_from_directory(DATA_ROOT, path, mimetype=mtype)
+    return send_with_mime(DATA_ROOT, path)
 
 
 @app.route("/api/data/<path:path>", methods=["PUT"])
@@ -86,9 +90,5 @@ def api_list():
     return flask.jsonify(os.listdir(DATA_ROOT))
 
 
-def main():
-    app.run(debug=DEBUG, host="0.0.0.0", port=4001)
-
-
 if __name__ == "__main__":
-    main()
+    app.run(debug=DEBUG, host="0.0.0.0", port=4001)
