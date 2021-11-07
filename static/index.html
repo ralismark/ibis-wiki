@@ -16,24 +16,6 @@
     <div id="cardbox"></div>
   </body>
 
-  <script>
-    const FAKE_DELAY = 0;
-    const READONLY = false;
-    const SAVE_INTERVAL = 2000;
-    const DUPLICATE_CARDS = true;
-
-    console.log(`config:
-          FAKE_DELAY : ${FAKE_DELAY}
-            READONLY : ${READONLY}
-       SAVE_INTERVAL : ${SAVE_INTERVAL}
-     DUPLICATE_CARDS : ${DUPLICATE_CARDS}
-    `.trim());
-  </script>
-
-  <script src="utils.js"></script>
-  <script src="api.js"></script>
-  <script src="fs.js"></script>
-  <script src="dom.js"></script>
-
+  <script type="module" src="translation.mjs"></script>
   <script type="module" src="/api/data/init.js"></script>
 </html>

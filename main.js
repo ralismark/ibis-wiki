@@ -2,6 +2,7 @@ import * as state from "@codemirror/state"
 import * as view from "@codemirror/view"
 import * as commands from "@codemirror/commands"
 import * as highlight from "@codemirror/highlight"
+import * as text from "@codemirror/text"
 
 // our own basic setup
 import {EditorView, keymap, highlightSpecialChars, drawSelection, highlightActiveLine} from "@codemirror/view"
@@ -87,6 +88,7 @@ function longParse(parser, str) {
 }
 
 window.CM = {
+  text,
   state,
   view,
   commands,

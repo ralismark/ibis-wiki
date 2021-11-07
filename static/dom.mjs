@@ -1,15 +1,18 @@
-"use strict";
+import * as api from "./api.mjs";
+import $ from "./dollar.mjs";
+import {DP} from "./fs.mjs";
+import Config from "./config.mjs";
 
-const CARDBOX = $("#cardbox");
+export const CARDBOX = $("#cardbox");
 
 /*
  * Opens a new card into the window
  */
-function openCard(name) {
+export function openCard(name) {
   name = name.trim();
 
   let targetCard = null;
-  if(!DUPLICATE_CARDS) {
+  if(!Config.DUPLICATE_CARDS) {
     for(let card of CARDBOX.querySelectorAll("ibis-card")) {
       if(card.slug === name) {
         targetCard = card;
@@ -26,7 +29,7 @@ function openCard(name) {
   targetCard.focus();
 }
 
-const View = $.define("ibis-view", B => class View extends B {
+export const View = $.define("ibis-view", B => class View extends B {
   static get observedAttributes() {
     return [ "slug" ];
   }
@@ -67,7 +70,7 @@ const View = $.define("ibis-view", B => class View extends B {
   }
 });
 
-const Card = $.define("ibis-card", B => class Card extends B {
+export const Card = $.define("ibis-card", B => class Card extends B {
   get slug() { return this.inner.slug; }
   set slug(val) { this.inner.slug = val; }
 
@@ -122,7 +125,7 @@ const Card = $.define("ibis-card", B => class Card extends B {
   render() {}
 });
 
-const Datalist = $.define("ibis-datalist", B => class Datalist extends B {
+export const Datalist = $.define("ibis-datalist", B => class Datalist extends B {
   constructor(props) {
     super(props);
 
@@ -143,7 +146,7 @@ const Datalist = $.define("ibis-datalist", B => class Datalist extends B {
 /*
  * A search bar element that allows you to also open new documents
  */
-const Search = $.define("ibis-search", B => class Search extends B {
+export const Search = $.define("ibis-search", B => class Search extends B {
   constructor(props) {
     super(props);
     this.style.display = "block";
