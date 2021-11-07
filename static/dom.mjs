@@ -3,6 +3,10 @@ import $ from "./dollar.mjs";
 import {DP} from "./fs.mjs";
 import Config from "./config.mjs";
 
+
+import {EditorView} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
+
+
 export const CARDBOX = $("#cardbox");
 
 /*
@@ -43,9 +47,6 @@ export const View = $.define("ibis-view", B => class View extends B {
 
   constructor(props) {
     super(props);
-
-    // import
-    const {EditorView} = CM.view;
 
     this.view = new EditorView({
       state: DP.pendingState,

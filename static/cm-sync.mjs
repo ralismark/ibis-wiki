@@ -1,10 +1,9 @@
 import * as api from "./api.mjs";
 import Config from "./config.mjs";
 
-// imports
-const {Annotation} = CM.state;
-const {ViewPlugin} = CM.view;
-const {Text} = CM.text;
+import {Annotation} from "https://cdn.skypack.dev/@codemirror/state@^0.19.0";
+import {ViewPlugin} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
+import {Text} from "https://cdn.skypack.dev/@codemirror/text@^0.19.0";
 
 export const syncingSlugs = new Set();
 

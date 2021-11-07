@@ -1,7 +1,7 @@
-// imports
-const {md, longParse, makeLang} = CM;
-const {styleTags, Tag, HighlightStyle, tags} = CM.highlight;
-const {EditorView} = CM.view;
+import * as md from "https://cdn.skypack.dev/@lezer/markdown@^0.15.1";
+import {LRLanguage, LanguageSupport} from "https://cdn.skypack.dev/@codemirror/language@^0.19.0";
+import {styleTags, Tag, HighlightStyle, tags} from "https://cdn.skypack.dev/@codemirror/highlight@^0.19.0";
+import {EditorView} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
 
 // internal links
 const RefLinkDelim = { resolve: "RefLink", mark: "RefLinkMark" };
@@ -73,17 +73,17 @@ const parser = md.parser.configure([
   {props: [styleTags(tagSpec)]},
 ]);
 
-export const showParse = x => longParse(parser, x);
+//export const showParse = x => longParse(parser, x);
 
-export const language = makeLang({
-  parser: parser,
-  languageData: {},
-});
+const language = new LanguageSupport(LRLanguage.define({
+    parser: parser,
+    languageData: {},
+}));
 
 /*
  * Syntax highlighting
  */
-export const highlighting = HighlightStyle.define([
+const highlighting = HighlightStyle.define([
   // fallbacks
   {tag: tags.punctuation, color: "rgb(127.5, 127.5, 127.5)"},
 
