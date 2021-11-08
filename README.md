@@ -10,10 +10,6 @@ Note: There are currently known issues with the autosave mechanism causing loss 
 
 ## Running
 
-This project has a javascript/nodejs component -- `main.js` -- that needs to be compiled first, so you will need node & npm installed.
-To build, you can simply run `./make.sh`, which will create the `build` directory and produce `build/bundle.js`.
-After this step, you won't need npm (e.g. if you're deploying this on a server).
-
 By default, ibis-wiki will use the `data` folder, but won't automatically create it.
 You can also set an alternate file directory with the `IBIS_DATA_ROOT` environment variable, either set that or `mkdir data`.
 Ibis-wiki will also load `init.js` from the data folder when you load the wiki, so you can use that to open up default cards etc.
