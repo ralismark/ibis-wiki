@@ -26,7 +26,7 @@ function xhr(prepare) {
 export async function list() {
   const { content, raise_for_status } = await xhr(req => {
     req.responseType = "json";
-    req.open("GET", "/api/list");
+    req.open("GET", Config.API_BASE + "list");
     req.send();
   });
   raise_for_status();
@@ -45,7 +45,7 @@ export function dbg_refreshToken(path) {
 export async function load(path) {
   const { content, status, raise_for_status } = await xhr(req => {
     req.responseType = "text"
-    req.open("GET", "/api/data/" + path);
+    req.open("GET", Config.API_BASE + "data/" + path);
     req.send();
   });
 
@@ -75,7 +75,7 @@ export async function store(path, content, token) {
 
   if(Config.READONLY) return;
   const { raise_for_status } = await xhr(req => {
-    req.open("PUT", "/api/data/" + path);
+    req.open("PUT", Config.API_BASE + "data/" + path);
     req.send(content);
   });
 
