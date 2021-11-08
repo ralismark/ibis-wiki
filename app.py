@@ -36,14 +36,6 @@ def send_with_mime(base, path):
     return flask.send_from_directory(base, path, mimetype=mtype)
 
 
-@app.route("/build/<path:path>")
-def static_build(path: str):
-    """
-    Build artifacts
-    """
-    return send_with_mime("build", path)
-
-
 @app.route("/api/data/<path:path>")
 def data_load(path: str):
     """
