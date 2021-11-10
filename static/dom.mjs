@@ -4,7 +4,7 @@ import {DP} from "./fs.mjs";
 import Config from "./config.mjs";
 
 
-import {EditorView} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
+import {EditorView} from "@codemirror/view";
 
 
 export const CARDBOX = $("#cardbox");
