@@ -33,52 +33,60 @@ export async function list() {
   return content;
 }
 
-const tokenMap = {};
-
-let tokenId = 0;
-function newToken() { return tokenId++; }
-
-export function dbg_refreshToken(path) {
-  return tokenMap[path] = newToken();
-}
-
 export async function load(path) {
-  const { content, status, raise_for_status } = await xhr(req => {
+  let { content, status, header, raise_for_status } = await xhr(req => {
     req.responseType = "text"
     req.open("GET", Config.API_BASE + "data/" + path);
     req.send();
   });
 
-  // we don't want to throw if content is null
-  if(status !== 404) raise_for_status();
+  // TODO 2021-11-11 clean up this logic
 
-  // fake token handling
-  if(!(path in tokenMap)) {
-    tokenMap[path] = newToken();
+  // we "gracefully" degrade to not validating ETag
+  let token = "*";
+
+  // special handling of 404
+  if(status === 404) {
+    raise_for_status = () => {}; // don't throw
+    content = "";
+    token = null;
+  } else if(Config.ETAGS && header.ETag) {
+    token = header.ETag;
   }
-  const token = tokenMap[path];
 
-  if(status === 404) return {token, content: ""};
+  raise_for_status();
+
+  console.log("[api]", path, "loaded.", "etag:", token);
   return {token, content};
 }
 
 export async function store(path, content, token) {
-  if(token !== tokenMap[path]) {
-    console.warn("[token]", path, "token mismatch!",
-      "passed:", token,
-      "expected:", tokenMap[path],
-    );
-    throw {
-      status: 412, // conflict
-    }
-  }
-
   if(Config.READONLY) return;
-  const { raise_for_status } = await xhr(req => {
+  const { header, raise_for_status } = await xhr(req => {
     req.open("PUT", Config.API_BASE + "data/" + path);
+
+    // token verif
+    if(Config.ETAGS) {
+      if(token === null)
+        req.setRequestHeader("If-None-Match", "*");
+      else
+        req.setRequestHeader("If-Match", token);
+    }
+
     req.send(content);
   });
 
+  raise_for_status();
+
+  // new token
+  token = "*";
+  if(content === "") {
+    token = null;
+  } else if(Config.ETAGS && header.ETag) {
+    token = header.ETag;
+  }
+
   // returns new token
-  return tokenMap[path] = newToken();
+  console.log("[api]", path, "stored.", "etag:", token);
+  return token;
 }
