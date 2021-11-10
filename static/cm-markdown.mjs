@@ -67,7 +67,7 @@ const tagSpec = {
   QuoteMark: tags.punctuation,
 };
 
-const parser = md.parser.configure([
+export const parser = md.parser.configure([
   md.Strikethrough,
   RefLink,
   {props: [styleTags(tagSpec)]},
