@@ -8,11 +8,12 @@ import os
 import mimetypes
 import flask
 import werkzeug.exceptions as werr
-from flask import request
+from flask_cors import CORS
 
 mimetypes.init()
 
 app = flask.Flask(__name__)
+CORS(app)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 DEBUG = bool(os.getenv("IBIS_DEBUG"))
@@ -29,19 +30,15 @@ def safe_join(*args):
         return None
 
 
-def send_with_mime(base, path):
-    mtype, _ = mimetypes.guess_type(path)
-    if mtype is None:
-        mtype = "text/plain"
-    return flask.send_from_directory(base, path, mimetype=mtype)
-
-
 @app.route("/api/data/<path:path>")
 def data_load(path: str):
     """
     Fetch the contents of a file
     """
-    return send_with_mime(DATA_ROOT, path)
+    mtype, _ = mimetypes.guess_type(path)
+    if mtype is None:
+        mtype = "text/plain"
+    return flask.send_from_directory(DATA_ROOT, path, mimetype=mtype)
 
 
 @app.route("/api/data/<path:path>", methods=["PUT"])
@@ -56,7 +53,7 @@ def data_store(path: str):
     chunk_size = 4096
 
     # check if empty first
-    first_chunk = request.stream.read(chunk_size)
+    first_chunk = flask.request.stream.read(chunk_size)
     if not first_chunk:
         try:
             os.remove(path)
@@ -66,7 +63,7 @@ def data_store(path: str):
         with open(path, "wb") as file:
             file.write(first_chunk)
             while True:
-                chunk = request.stream.read(chunk_size)
+                chunk = flask.request.stream.read(chunk_size)
                 if not chunk:
                     break
                 file.write(chunk)
