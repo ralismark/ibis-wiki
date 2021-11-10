@@ -5,8 +5,39 @@
     <title>Ibis Project</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="icon" type="image/png" href="ibis.png">
-
     <link rel="stylesheet" href="index.css">
+
+    <!--
+      JSPM Generator Import Map
+      Edit URL: https://generator.jspm.io/#bc7BDsIgDAZgDp58D6+4aWbibS/hAyA0QAY0KZ1TX1634AXDoZf/+9P2sBNi/xG3xJ4DGDFqNBA9EdJRB8xwJ6Un4Dx2sr/Kri5gjCqZnw2VOW9dWIcLXv4wM9KrtTOoZGdlodi5sqhYu/qhupBZMbS+YXhyK394WErerxDgDdsVmgwuacsHefoCp+6kfSIB
+    -->
+    <script type="importmap-shim">
+      {
+        "imports": {
+          "@codemirror/closebrackets": "https://ga.jspm.io/npm:@codemirror/closebrackets@0.19.0/dist/index.js",
+          "@codemirror/commands": "https://ga.jspm.io/npm:@codemirror/commands@0.19.5/dist/index.js",
+          "@codemirror/highlight": "https://ga.jspm.io/npm:@codemirror/highlight@0.19.6/dist/index.js",
+          "@codemirror/history": "https://ga.jspm.io/npm:@codemirror/history@0.19.0/dist/index.js",
+          "@codemirror/language": "https://ga.jspm.io/npm:@codemirror/language@0.19.3/dist/index.js",
+          "@codemirror/matchbrackets": "https://ga.jspm.io/npm:@codemirror/matchbrackets@0.19.3/dist/index.js",
+          "@codemirror/state": "https://ga.jspm.io/npm:@codemirror/state@0.19.5/dist/index.js",
+          "@codemirror/text": "https://ga.jspm.io/npm:@codemirror/text@0.19.5/dist/index.js",
+          "@codemirror/view": "https://ga.jspm.io/npm:@codemirror/view@0.19.15/dist/index.js",
+          "@lezer/markdown": "https://ga.jspm.io/npm:@lezer/markdown@0.15.2/dist/index.js"
+        },
+        "scopes": {
+          "https://ga.jspm.io/": {
+            "@codemirror/rangeset": "https://ga.jspm.io/npm:@codemirror/rangeset@0.19.1/dist/index.js",
+            "@lezer/common": "https://ga.jspm.io/npm:@lezer/common@0.15.8/dist/index.js",
+            "style-mod": "https://ga.jspm.io/npm:style-mod@4.0.0/src/style-mod.js",
+            "w3c-keyname": "https://ga.jspm.io/npm:w3c-keyname@2.2.4/index.es.js"
+          }
+        }
+      }
+    </script>
+
+    <!-- ES Module Shims: Import maps polyfill for modules browsers without import maps support (all except Chrome 89+) -->
+    <script async src="https://ga.jspm.io/npm:es-module-shims@0.12.8/dist/es-module-shims.min.js" crossorigin="anonymous"></script>
   </head>
 
   <body>
@@ -15,6 +46,6 @@
     <div id="cardbox"></div>
   </body>
 
-  <script type="module" src="translation.mjs"></script>
-  <script type="module" src="/api/data/init.js"></script>
+  <script type="module-shim" src="translation.mjs"></script>
+  <script type="module-shim" src="/api/data/init.js"></script>
 </html>

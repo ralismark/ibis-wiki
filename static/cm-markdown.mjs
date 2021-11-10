@@ -1,7 +1,7 @@
-import * as md from "https://cdn.skypack.dev/@lezer/markdown@^0.15.1";
-import {LRLanguage, LanguageSupport} from "https://cdn.skypack.dev/@codemirror/language@^0.19.0";
-import {styleTags, Tag, HighlightStyle, tags} from "https://cdn.skypack.dev/@codemirror/highlight@^0.19.0";
-import {EditorView} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
+import * as md from "@lezer/markdown";
+import {LRLanguage, LanguageSupport} from "@codemirror/language";
+import {styleTags, Tag, HighlightStyle, tags} from "@codemirror/highlight";
+import {EditorView} from "@codemirror/view";
 
 // internal links
 const RefLinkDelim = { resolve: "RefLink", mark: "RefLinkMark" };

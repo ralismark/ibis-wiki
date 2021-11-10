@@ -4,9 +4,9 @@ import {syncPlugin} from "./cm-sync.mjs";
 import * as api from "./api.mjs";
 import $ from "./dollar.mjs";
 
-import {EditorState} from "https://cdn.skypack.dev/@codemirror/state@^0.19.0";
-import {EditorView} from "https://cdn.skypack.dev/@codemirror/view@^0.19.0";
-import {Text} from "https://cdn.skypack.dev/@codemirror/text@^0.19.0";
+import {EditorState} from "@codemirror/state";
+import {EditorView} from "@codemirror/view";
+import {Text} from "@codemirror/text";
 
 export const DP = (() => {
 
