@@ -7,6 +7,10 @@ import {Text} from "@codemirror/text";
 
 export const syncingSlugs = new Set();
 
+function updateIndicator() {
+  document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
+}
+
 class Synchroniser {
   constructor(slug, content, token, callbacks) {
     this.slug = slug; // type: string
@@ -80,9 +84,17 @@ class Synchroniser {
     if(this.syncPromise !== null) return;
 
     this.syncPromise = (async () => {
-      await $.sleep(Config.SAVE_INTERVAL);
-      await this.syncNow();
-      this.syncPromise = null;
+      syncingSlugs.add(this.slug);
+      updateIndicator();
+
+      try {
+        await $.sleep(Config.SAVE_INTERVAL);
+        await this.syncNow();
+      } finally {
+        syncingSlugs.delete(this.slug);
+        updateIndicator();
+        this.syncPromise = null;
+      }
     })();
   }
 };
@@ -100,12 +112,6 @@ export function syncPlugin(eventTarget, slug, content, token) {
         eventTarget.dispatchEvent(new Event("listchanged"));
       },
       onConflictResolution(merged) {
-        /*
-         * Ok, here's what's required.
-         * - To a view, call view.dispatch with a TransactionSpec.
-         * - TransactionSpec is an interface that, notably, allows a changes member of type ChangeSpec
-         * - ChangeSpec is the interface {from: number, to?: number, insert? string | Text}.
-         */
         for(let view of views) {
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: merged },
