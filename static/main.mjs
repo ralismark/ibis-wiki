@@ -10,3 +10,5 @@ window.DP = DP;
 window.Config = Config;
 
 for(let key of Object.keys(dom)) window[key] = dom[key];
+
+import(Config.API_BASE + "init.js");
