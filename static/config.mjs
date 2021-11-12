@@ -16,6 +16,7 @@ const config = new Proxy(defaultConfig, {
   set(obj, prop, newval) {
     if(!(prop in obj)) throw `Key ${prop} not a valid config option`;
     localStorage.setItem(prop, JSON.stringify(newval));
+    return true;
   },
 
   deleteProperty(obj, prop) {

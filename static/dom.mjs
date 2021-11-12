@@ -33,6 +33,8 @@ export function openCard(name) {
   targetCard.focus();
 }
 
+// TODO 2021-11-12 remove functionality to change a card's slug
+
 export const View = $.define("ibis-view", B => class View extends B {
   static get observedAttributes() {
     return [ "slug" ];
@@ -165,5 +167,64 @@ export const Search = $.define("ibis-search", B => class Search extends B {
     };
 
     this.replaceChildren(form);
+  }
+});
+
+/*
+ * Configuration menu
+ */
+export const ConfigCard = $.define("ibis-config", B => class ConfigCard extends B {
+  constructor(props) {
+    super(props);
+  }
+
+  makeInput(entry) {
+    const key = entry[0], value = entry[1];
+
+    if(typeof(value) === "boolean") {
+      const el = $.e("input", {
+        id: `config-${key}`,
+        type: "checkbox",
+        onchange(ev) {
+          Config[key] = el.checked;
+        },
+      });
+      el.checked = value;
+      return el;
+    } else if(typeof(value) === "number") {
+      const el = $.e("input", {
+        id: `config-${key}`,
+        type: "number",
+        onchange(ev) {
+          Config[key] = el.value;
+        },
+      });
+      el.value = value;
+      return el;
+    } else if(typeof(value) === "string") {
+      const el = $.e("input", {
+        id: `config-${key}`,
+        type: "text",
+        onchange(ev) {
+          Config[key] = el.value;
+        },
+      });
+      el.value = value;
+      return el;
+    }
+    return "<unrepresentable>";
+  }
+
+  async doRender() {
+    const inner = $.e("table", {},
+      ...Object.entries(Config).map(e => {
+        return $.e("tr", {},
+          $.e("th", { scope: "row" }, $.e("label", { for: `config-${e[0]}` }, e[0])),
+          $.e("td", {}, this.makeInput(e)),
+        );
+      })
+    );
+
+    this.replaceChildren(inner);
   }
 });
