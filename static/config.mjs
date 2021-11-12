@@ -2,7 +2,7 @@ const defaultConfig = {
   READONLY: false,
   SAVE_INTERVAL: 2000,
   DUPLICATE_CARDS: true,
-  API_BASE: "/api/",
+  API_BASE: "../demo-data/",
   ETAGS: false,
 };
 

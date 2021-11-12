@@ -1,0 +1,20 @@
+# Welcome to ibis wiki!
+
+This is just a demo site, with some demo files to give you an idea of what this is like. Any changes you make here will be lost when you leave or refresh this page.
+
+To open a card, use the search bar at the top! New cards are automatically created when you open them.
+
+**Markdown** is *fully supported* here, using the `@lezer/markdown` library <https://github.com/lezer-parser/markdown#user-content-delimitertype>.
+
+In addition to the features provided by that library, links are also clickable! Try clicking the above link. Also, there are [[internal-links]] a la Roam Research (which was one of the inspirations for this).
+
+## Further usage
+
+If you want to use this as an actual wiki, you'll need a [WebDAV] server that has [CORS] configured correctly (or alternatively: a WebDAV server and a cors proxy).
+
+[WebDAV]: https://en.wikipedia.org/wiki/WebDAV
+[CORS]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+
+Then, open the Configuration Options below and set API_BASE to the URL of your server, including a trailing slash. You can also just use a subdirectory with e.g. `http://example.com/wiki/`.
+
+You can also customise what appears on startup by changing [[init.js]].
