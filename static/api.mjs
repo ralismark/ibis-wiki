@@ -24,7 +24,7 @@ function xhr(prepare) {
 }
 
 export async function list() {
-  const { content, raise_for_status } = await xhr(req => {
+  const { status, content, raise_for_status } = await xhr(req => {
     req.open("PROPFIND", Config.API_BASE);
     req.responseType = "document";
     req.setRequestHeader("Depth", "1");
@@ -37,6 +37,7 @@ export async function list() {
 </propfind>
     `);
   });
+  if(status === 405) return []; // 405 Method Not Allowed
   raise_for_status();
 
   const entries = [];
