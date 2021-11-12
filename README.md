@@ -6,17 +6,28 @@ It's wasn't originally meant for use by others, and isn't exactly that stable, b
 
 As of 29 Aug 2021, I've been using this for almost 3 months (i.e. [dogfooding](https://indieweb.org/selfdogfood)).
 
-Note: There are currently known issues with the autosave mechanism causing loss of data.
+Note: There are currently issues with the autosave mechanism causing loss of data.
+ETag support is being worked on but is not completely stable (and is disabled by default).
+Additionally, some WebDAV servers (`rclone`'s in particular) do not support ETags.
 
 ## Running
 
-By default, ibis-wiki will use the `data` folder, but won't automatically create it.
-You can also set an alternate file directory with the `IBIS_DATA_ROOT` environment variable, either set that or `mkdir data`.
-Ibis-wiki will also load `init.js` from the data folder when you load the wiki, so you can use that to open up default cards etc.
+`ibis-wiki` requires a WebDAV server to operate, and the address of this will need to be set when you first use this wiki.
+A WebDAV server isn't included here, but any conforming server will suffice as long as the app is able to make requests to it -- it only needs a very minimal subset of the WebDAV API.
+Other than that, this wiki does not require any server-side setup.
 
-To run the website, you'll need python.
-First, install dependencies with `pip install -r requirements.txt` (possibly in a virtual environment -- `python3 -m ven venv && . ./venv/bin/activate`).
-Then, you can run `app.py` to start the server on port 4001, with the main wiki reachable at `http://localhost:4001/static/index.html`.
+## CORS
+
+[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS), or Cross-Origin Resource Sharing, is a security mechanism that forbids webpages from making requests to a URL with a different origin (i.e. different domain, port, or protocol) unless that server is explicitly configured to allow it.
+Unfortunately, many servers do not have this configured by default (notably, it currently cannot be allowed in `rclone serve webdav` at all).
+`cors.py` is provided as a way to proxy another service in a way that allows CORS requests.
+To run it, pass the URL of the webdav service to proxy, including the trailing slash e.g.
+
+```
+./cors.py http://localhost:1729/ibis-wiki-data/
+```
+
+Now, all requests to port 4002 will be forwarded to that URL.
 
 ## Design Notes
 
