@@ -4,7 +4,7 @@ Yet another wiki project, built from the ground up.
 This is inspired by the likes of [TiddlyWiki](https://tiddlywiki.com/) and [Logseq](https://logseq.com/), but designed from the ground up to address some of my gripes with them.
 It's wasn't originally meant for use by others, and isn't exactly that stable, but if you want to play around with it, definitely feel free to!
 
-As of 29 Aug 2021, I've been using this for almost 3 months (i.e. [dogfooding](https://indieweb.org/selfdogfood)).
+As of 12 Nov 2021, I've been using this for around 6 months (see: [dogfooding](https://indieweb.org/selfdogfood)).
 
 Note: There are currently issues with the autosave mechanism causing loss of data.
 ETag support is being worked on but is not completely stable (and is disabled by default).
