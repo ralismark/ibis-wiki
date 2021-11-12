@@ -64,7 +64,7 @@ ibis-card {
 	border: 1px solid rgba(127, 127, 127, 0.4);
 	border-radius: 4px;
 	padding: 0 1rem 1rem;
-	margin: 1rem 0;
+	margin: 1rem auto;
 
 	transition: background 1s;
 }
@@ -92,6 +92,18 @@ ibis-card {
 
 	ibis-index > div > a {
 		margin: 0 .5em;
+	}
+
+ibis-config {
+	display: block;
+}
+
+	ibis-config table {
+		width: 100%;
+	}
+
+	ibis-config input {
+		width: 100%;
 	}
 
 ibis-search input {
