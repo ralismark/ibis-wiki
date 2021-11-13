@@ -12,11 +12,11 @@ function updateIndicator() {
 }
 
 class Synchroniser {
-  constructor(slug, content, token, callbacks) {
+  constructor(slug, content, etag, callbacks) {
     this.slug = slug; // type: string
 
     // Compare these two to determine if we want to sync
-    this.token = token;
+    this.etag = etag;
     this.remoteContent = content; // type: @codemirror/text.Text
     this.localContent = content; // type: @codemirror/text.Text
 
@@ -30,11 +30,11 @@ class Synchroniser {
   async handleConflict() {
     console.warn("[sync]", this.slug, "merge conflict.");
 
-    const {token, content} = await api.load(this.slug);
+    const {etag, content} = await api.load(this.slug);
     const text = Text.of(content.split("\n"));
 
-    console.log("[sync]", this.slug, "resolved merge config.", "token:", token, "to:", text);
-    this.token = token;
+    console.log("[sync]", this.slug, "resolved merge config.", "etag:", etag, "to:", text);
+    this.etag = etag;
     this.remoteContent = text;
 
     // TODO 2021-11-07 actually merge the input
@@ -47,11 +47,11 @@ class Synchroniser {
 
     console.log("[sync]", this.slug, "starting sync.",
       "content:", content,
-      "token:", this.token,
+      "etag:", this.etag,
     );
 
     try {
-      this.token = await api.store(this.slug, content.toString(), this.token);
+      this.etag = await api.store(this.slug, content.toString(), this.etag);
       this.remoteContent = content;
     } catch(e) {
       if(e.status === 412) {
@@ -64,7 +64,7 @@ class Synchroniser {
       return;
     }
 
-    console.log("[sync]", this.slug, "sync succeeded.", "token:", this.token);
+    console.log("[sync]", this.slug, "sync succeeded.", "etag:", this.etag);
 
     if((content.length === 0) != (this.remoteContent.length === 0)) {
       this.callbacks.onListUpdate();
@@ -84,30 +84,36 @@ class Synchroniser {
     if(this.syncPromise !== null) return;
 
     this.syncPromise = (async () => {
-      syncingSlugs.add(this.slug);
-      updateIndicator();
+      this.onRequestedSync(this.slug);
 
       try {
         await $.sleep(Config.SAVE_INTERVAL);
         await this.syncNow();
       } finally {
-        syncingSlugs.delete(this.slug);
-        updateIndicator();
         this.syncPromise = null;
+        this.onFulfiledSync(this.slug);
       }
     })();
   }
 };
 
-export function syncPlugin(eventTarget, slug, content, token) {
+export function syncPlugin(eventTarget, slug, content, etag) {
   const views = new Set();
   const downstream = Annotation.define(Boolean); // to avoid update loops
 
   const synchroniser = new Synchroniser(
     slug,
     content,
-    token,
+    etag,
     {
+      onRequestedSync(slug) {
+        syncingSlugs.add(this.slug);
+        document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
+      },
+      onFulfiledSync(slug) {
+        syncingSlugs.delete(this.slug);
+        document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
+      },
       onListUpdate() {
         eventTarget.dispatchEvent(new Event("listchanged"));
       },

@@ -31,11 +31,10 @@ export const DP = (() => {
    * Create a new document for the given slug
    */
   async function create(slug) {
-    const {token, content} = await api.load(slug);
+    const {etag, content} = await api.load(slug);
     const text = Text.of(content.split("\n"));
 
-
-    const sync = syncPlugin(output, slug, text, token);
+    const sync = syncPlugin(output, slug, text, etag);
     return EditorState.create({
       doc: text,
       extensions: [markdown, sync, theme, basicSetup],

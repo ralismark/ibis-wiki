@@ -55,16 +55,6 @@ export async function list() {
   return entries;
 }
 
-export async function old_list() {
-  const { content, raise_for_status } = await xhr(req => {
-    req.open("GET", Config.API_BASE + "list");
-    req.responseType = "json";
-    req.send();
-  });
-  raise_for_status();
-  return content;
-}
-
 export async function load(path) {
   let { content, status, header, raise_for_status } = await xhr(req => {
     req.open("GET", Config.API_BASE + path);
@@ -73,47 +63,22 @@ export async function load(path) {
   });
 
   // we "gracefully" degrade to not validating ETag
-  let token = header.ETag || "*";
+  let etag = header.ETag || "*";
 
   // special handling of 404
   if(status === 404) {
     raise_for_status = () => {}; // don't throw
     content = "";
-    token = null;
+    etag = null;
   }
 
   raise_for_status();
 
-  console.log("[api]", path, "loaded.", "etag:", token);
-  return {token, content};
+  console.log("[api]", path, "loaded.", "etag:", etag);
+  return {etag, content};
 }
 
-export async function old_load(path) {
-  let { content, status, header, raise_for_status } = await xhr(req => {
-    req.open("GET", Config.API_BASE + "data/" + path);
-    req.responseType = "text"
-    req.send();
-  });
-
-  // TODO 2021-11-11 clean up this logic
-
-  // we "gracefully" degrade to not validating ETag
-  let token = header.ETag || "*";
-
-  // special handling of 404
-  if(status === 404) {
-    raise_for_status = () => {}; // don't throw
-    content = "";
-    token = null;
-  }
-
-  raise_for_status();
-
-  console.log("[api]", path, "loaded.", "etag:", token);
-  return {token, content};
-}
-
-export async function store(path, content, token) {
+export async function store(path, content, etag) {
   if(Config.READONLY) return;
 
   const isDelete = content === "";
@@ -121,12 +86,12 @@ export async function store(path, content, token) {
   const { header, raise_for_status } = await xhr(req => {
     req.open(isDelete ? "DELETE" : "PUT", Config.API_BASE + path);
 
-    // token verif
+    // etag verif
     if(Config.ETAGS) {
-      if(token === null)
+      if(etag === null)
         req.setRequestHeader("If-None-Match", "*");
       else
-        req.setRequestHeader("If-Match", token);
+        req.setRequestHeader("If-Match", etag);
     }
 
     req.send(content);
@@ -135,39 +100,8 @@ export async function store(path, content, token) {
   raise_for_status();
 
   // we "gracefully" degrade to not validating ETag
-  token = isDelete ? null : header.ETag || "*";
+  etag = isDelete ? null : header.ETag || "*";
 
-  console.log("[api]", path, "stored.", "etag:", token);
-  return token;
-}
-
-export async function old_store(path, content, token) {
-  if(Config.READONLY) return;
-  const { header, raise_for_status } = await xhr(req => {
-    req.open("PUT", Config.API_BASE + "data/" + path);
-
-    // token verif
-    if(Config.ETAGS) {
-      if(token === null)
-        req.setRequestHeader("If-None-Match", "*");
-      else
-        req.setRequestHeader("If-Match", token);
-    }
-
-    req.send(content);
-  });
-
-  raise_for_status();
-
-  // new token
-  token = "*";
-  if(content === "") {
-    token = null;
-  } else if(Config.ETAGS && header.ETag) {
-    token = header.ETag;
-  }
-
-  // returns new token
-  console.log("[api]", path, "stored.", "etag:", token);
-  return token;
+  console.log("[api]", path, "stored.", "etag:", etag);
+  return etag;
 }
