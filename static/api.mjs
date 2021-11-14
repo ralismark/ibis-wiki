@@ -59,6 +59,12 @@ export async function load(path) {
   let { content, status, header, raise_for_status } = await xhr(req => {
     req.open("GET", Config.API_BASE + path);
     req.responseType = "text"
+
+    // https://stackoverflow.com/a/48969579
+    req.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
+    req.setRequestHeader("Expires", "Tue, 01 Jan 1980 1:00:00 GMT");
+    req.setRequestHeader("Pragma", "no-cache");
+
     req.send();
   });
 
