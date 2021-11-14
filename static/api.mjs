@@ -85,9 +85,13 @@ export async function load(path) {
 }
 
 export async function store(path, content, etag) {
-  if(Config.READONLY) return;
-
   const isDelete = content === "";
+
+
+  if(Config.READONLY) {
+    console.log("[api]", path, "store blocked.", "etag:", etag);
+    return isDelete ? null : "*";
+  }
 
   const { header, raise_for_status } = await xhr(req => {
     req.open(isDelete ? "DELETE" : "PUT", Config.API_BASE + path);
