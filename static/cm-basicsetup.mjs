@@ -1,7 +1,7 @@
 // our own basic setup
 import {EditorView, keymap, highlightSpecialChars, drawSelection, highlightActiveLine} from "@codemirror/view";
 import {history, historyKeymap} from "@codemirror/history";
-import {defaultKeymap} from "@codemirror/commands";
+import {defaultKeymap, indentWithTab} from "@codemirror/commands";
 import {bracketMatching} from "@codemirror/matchbrackets";
 import {closeBrackets, closeBracketsKeymap} from "@codemirror/closebrackets";
 import {defaultHighlightStyle} from "@codemirror/highlight";
@@ -17,6 +17,7 @@ export default [
   highlightActiveLine(),
   EditorView.lineWrapping,
   keymap.of([
+    indentWithTab,
     ...closeBracketsKeymap,
     ...defaultKeymap,
     ...historyKeymap,

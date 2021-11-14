@@ -61,6 +61,14 @@ export const DP = (() => {
       }
       return (await this.docs[slug]);
     }
+
+    pendingState = EditorState.create({
+      doc: "loading...",
+      extensions: [
+        EditorState.readOnly.of(true),
+        EditorView.editable.of(false),
+      ],
+    });
   };
 
   output.addEventListener("listchanged", () => {

@@ -84,14 +84,14 @@ class Synchroniser {
     if(this.syncPromise !== null) return;
 
     this.syncPromise = (async () => {
-      this.onRequestedSync(this.slug);
+      this.callbacks.onRequestedSync(this.slug);
 
       try {
         await $.sleep(Config.SAVE_INTERVAL);
         await this.syncNow();
       } finally {
         this.syncPromise = null;
-        this.onFulfiledSync(this.slug);
+        this.callbacks.onFulfiledSync(this.slug);
       }
     })();
   }
@@ -107,11 +107,11 @@ export function syncPlugin(eventTarget, slug, content, etag) {
     etag,
     {
       onRequestedSync(slug) {
-        syncingSlugs.add(this.slug);
+        syncingSlugs.add(slug);
         document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
       },
       onFulfiledSync(slug) {
-        syncingSlugs.delete(this.slug);
+        syncingSlugs.delete(slug);
         document.body.setAttribute("ibis-syncing", Array.from(syncingSlugs).join(" "));
       },
       onListUpdate() {
