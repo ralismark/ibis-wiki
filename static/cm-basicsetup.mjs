@@ -5,7 +5,7 @@ import {defaultKeymap, indentWithTab} from "@codemirror/commands";
 import {bracketMatching} from "@codemirror/matchbrackets";
 import {closeBrackets, closeBracketsKeymap} from "@codemirror/closebrackets";
 import {defaultHighlightStyle} from "@codemirror/highlight";
-import {indentService} from "@codemirror/language";
+import {indentService, indentUnit} from "@codemirror/language";
 
 export default [
   highlightSpecialChars(),
@@ -23,4 +23,5 @@ export default [
     ...historyKeymap,
   ]),
   indentService.of(() => 0), // no indent
+  indentUnit.of("    "), // 4-space indent
 ];
