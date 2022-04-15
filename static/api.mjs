@@ -1,4 +1,5 @@
 import Config from "./config.mjs";
+import {reportError} from "./error.mjs";
 
 function xhr(prepare) {
   return new Promise((resolve, reject) => {
@@ -13,7 +14,10 @@ function xhr(prepare) {
         }),
 
         raise_for_status() {
-          if(req.status >= 400) throw req;
+          if(req.status < 400) return;
+          reportError(`Error while loading "${req.responseURL}":
+          ${req.statusText}`);
+          throw req;
         },
       });
     });
