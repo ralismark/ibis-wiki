@@ -33,7 +33,7 @@ export const schema = {
       + "\n- none: use GET_URL and in-memory storage for writing."
       + "\n- webdav: use WEBDAV_URL as a WebDAV backend."
       + "\n- s3: use S3. This is not implemented yet",
-    options: ["none", "webdav", /*"s3"*/],
+    options: ["none", "webdav", "s3"],
     default: "none",
   },
   WEBDAV_URL: {
@@ -58,6 +58,12 @@ export const schema = {
     help:
       "(only used if STORAGE_TYPE=s3)"
       + "\nS3 is not implemented yet",
+    default: "",
+  },
+  S3_PREFIX: {
+    help:
+      "(only used if STORAGE_TYPE=s3)"
+      + "\nPrefix to use for objects",
     default: "",
   },
 };
