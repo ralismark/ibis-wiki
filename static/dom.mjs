@@ -1,7 +1,7 @@
 import * as api from "./api.mjs";
 import $ from "./dollar.mjs";
 import {DP} from "./fs.mjs";
-import Config from "./config.mjs";
+import {schema} from "./config.mjs";
 
 
 import {EditorView} from "@codemirror/view";
@@ -16,7 +16,7 @@ export function openCard(name) {
   name = name.trim();
 
   let targetCard = null;
-  if(!Config.DUPLICATE_CARDS) {
+  if(!schema.DUPLICATE_CARDS.get()) {
     for(let card of CARDBOX.querySelectorAll("ibis-card")) {
       if(card.slug === name) {
         targetCard = card;
@@ -178,50 +178,61 @@ export const ConfigCard = $.define("ibis-config", B => class ConfigCard extends 
     super(props);
   }
 
-  makeInput(entry) {
-    const key = entry[0], value = entry[1];
-
-    if(typeof(value) === "boolean") {
+  makeInput(key, value) {
+    if(typeof(value.default) === "boolean") {
       const el = $.e("input", {
         id: `config-${key}`,
         type: "checkbox",
         onchange(ev) {
-          Config[key] = el.checked;
+          value.set(el.checked);
         },
       });
-      el.checked = value;
+      el.checked = value.get();
       return el;
-    } else if(typeof(value) === "number") {
+    } else if(typeof(value.default) === "number") {
       const el = $.e("input", {
         id: `config-${key}`,
         type: "number",
         onchange(ev) {
-          Config[key] = el.value;
+          value.set(el.value);
         },
       });
-      el.value = value;
+      el.value = value.get();
       return el;
-    } else if(typeof(value) === "string") {
-      const el = $.e("input", {
-        id: `config-${key}`,
-        type: "text",
-        onchange(ev) {
-          Config[key] = el.value;
-        },
-      });
-      el.value = value;
-      return el;
+    } else if(typeof(value.default) === "string") {
+      if(value.options !== undefined) {
+        const el = $.e("select", {
+          id: `config-${key}`,
+          onchange(ev) {
+            value.set(el.value);
+          },
+        }, ...value.options.map(o => $.e("option", value.get() === o ? { selected: 1 } : {}, o)));
+        return el;
+      } else {
+        const el = $.e("input", {
+          id: `config-${key}`,
+          type: "text",
+          onchange(ev) {
+            value.set(el.value);
+          },
+        });
+        el.value = value.get();
+        return el;
+      }
     }
     return "<unrepresentable>";
   }
 
   async doRender() {
     const inner = $.e("table", {},
-      ...Object.entries(Config).map(e => {
-        return $.e("tr", {},
-          $.e("th", { scope: "row" }, $.e("label", { for: `config-${e[0]}` }, e[0])),
-          $.e("td", {}, this.makeInput(e)),
-        );
+      Object.entries(schema).flatMap(([key, value]) => {
+        return [
+          $.e("tr", {},
+            $.e("th", { scope: "row" }, $.e("label", { for: `config-${key}` }, key)),
+            $.e("td", {}, this.makeInput(key, value)),
+          ),
+          $.e("tr", { style: { whiteSpace: "pre-wrap" } }, $.e("td", { colspan: 2 }, value.help)),
+        ];
       })
     );
 

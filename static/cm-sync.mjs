@@ -1,5 +1,5 @@
 import * as api from "./api.mjs";
-import Config from "./config.mjs";
+import {schema} from "./config.mjs";
 
 import {Annotation} from "@codemirror/state";
 import {ViewPlugin} from "@codemirror/view";
@@ -73,7 +73,7 @@ class Synchroniser {
     if(!this.remoteContent.eq(this.localContent)) {
       // we need to sync again
       console.log("[sync]", this.slug, "want another sync.");
-      await $.sleep(Config.SAVE_INTERVAL);
+      await $.sleep(schema.SAVE_INTERVAL.get());
       await this.syncNow();
     }
   }
@@ -87,7 +87,7 @@ class Synchroniser {
       this.callbacks.onRequestedSync(this.slug);
 
       try {
-        await $.sleep(Config.SAVE_INTERVAL);
+        await $.sleep(schema.SAVE_INTERVAL.get());
         await this.syncNow();
       } finally {
         this.syncPromise = null;

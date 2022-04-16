@@ -1,4 +1,4 @@
-import Config from "./config.mjs";
+import {schema} from "./config.mjs";
 import {reportError} from "./error.mjs";
 
 function xhr(prepare) {
@@ -30,7 +30,7 @@ function xhr(prepare) {
 const webdav_api = {
   async list() {
     const { status, content, raise_for_status } = await xhr(req => {
-      req.open("PROPFIND", Config.WEBDAV_URL);
+      req.open("PROPFIND", schema.WEBDAV_URL.get());
       req.responseType = "document";
       req.setRequestHeader("Depth", "1");
       req.send(`
@@ -62,8 +62,8 @@ const webdav_api = {
 
   async load(path) {
     let { content, status, header, raise_for_status } = await xhr(req => {
-      req.open("GET", Config.WEBDAV_URL + path);
-      req.responseType = "text"
+      req.open("GET", schema.WEBDAV_URL.get() + path);
+      req.responseType = "text";
 
       // https://stackoverflow.com/a/48969579
       req.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
@@ -85,8 +85,8 @@ const webdav_api = {
 
   async delete(path, etag) {
     const { header, raise_for_status } = await xhr(req => {
-      req.open("DELETE", Config.WEBDAV_URL + path);
-      if(Config.ETAGS) {
+      req.open("DELETE", schema.WEBDAV_URL.get() + path);
+      if(schema.ETAGS.get()) {
         if(etag === null)
           req.setRequestHeader("If-None-Match", "*");
         else
@@ -99,8 +99,8 @@ const webdav_api = {
 
   async store_nonempty(path, content, etag) {
     const { header, raise_for_status } = await xhr(req => {
-      req.open("PUT", Config.WEBDAV_URL + path);
-      if(Config.ETAGS) {
+      req.open("PUT", schema.WEBDAV_URL.get() + path);
+      if(schema.ETAGS.get()) {
         if(etag === null)
           req.setRequestHeader("If-None-Match", "*");
         else
@@ -134,7 +134,7 @@ export async function load(path) {
 }
 
 export async function store(path, content, etag) {
-  if(Config.READONLY) {
+  if(schema.READONLY.get()) {
     console.log("[api]", path, "store blocked.", "etag:", etag);
     return;
   }
