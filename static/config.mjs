@@ -1,9 +1,17 @@
+import $ from "./dollar.mjs";
+
 const defaultConfig = {
   READONLY: false,
   SAVE_INTERVAL: 2000,
   DUPLICATE_CARDS: true,
-  API_BASE: "../demo-data/",
   ETAGS: false,
+
+  GET_URL: "../demo-data/",
+  ENDPOINT_TYPE: "",
+  WEBDAV_URL: "",
+  S3_ACCESS_KEY_ID: "",
+  S3_SECRET_ACCESS_KEY: "",
+  S3_BUCKET: "",
 };
 
 const config = new Proxy(defaultConfig, {
