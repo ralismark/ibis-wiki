@@ -14,9 +14,8 @@ function xhr(prepare) {
         }),
 
         raise_for_status() {
-          if(req.status < 400) return;
-          reportError(`Error while loading "${req.responseURL}":
-          ${req.statusText}`);
+          if(200 <= req.status && req.status <= 299) return;
+          reportError(`Error while loading "${req.responseURL}": ${req.statusText}`);
           throw req;
         },
       });
@@ -164,12 +163,100 @@ class NoneStorage {
   }
 };
 
-const backend_mapping = {
-  "none": NoneStorage,
-  "webdav": WebdavStorage,
+export class S3Storage {
+  constructor() {
+    this.aws = (async () => {
+      const { AwsClient } = await import("aws4fetch");
+      return new AwsClient({
+        accessKeyId: schema.S3_ACCESS_KEY_ID.get(),
+        secretAccessKey: schema.S3_SECRET_ACCESS_KEY.get(),
+      });
+    })();
+  }
+
+  async fetch(...args) {
+    const resp = await (await this.aws).fetch(...args);
+    return {
+      resp,
+      raise_for_status() {
+        if(resp.ok) return;
+        reportError(`Error while loading "${url}": ${resp.status} ${resp.statusText}`);
+        throw resp;
+      },
+    };
+  }
+
+  async list() {
+    const s3prefix = schema.S3_PREFIX.get();
+    const {resp, raise_for_status} = await this.fetch(`${schema.S3_BUCKET.get()}?list-type=2&prefix=${s3prefix}`);
+    raise_for_status();
+    const doc = (new DOMParser).parseFromString(await resp.text(), "text/xml");
+
+    const entries = [];
+    for(let entry of doc.documentElement.children) {
+      if(entry.tagName !== "Contents")
+        continue;
+
+      const path = entry.querySelector("Key").textContent;
+      if(!path.startsWith(s3prefix)) {
+        reportError(`Got object that didn't start with S3_PREFIX: "${path}"`);
+        continue;
+      }
+
+      entries.push(path.slice(s3prefix.length));
+    }
+
+    return entries;
+  }
+
+  async load(path) {
+    const {resp, raise_for_status} = await this.fetch(
+      `${schema.S3_BUCKET.get()}${schema.S3_PREFIX.get()}${path}`
+    );
+    if(resp.status === 404) return {etag: null, content: ""};
+    raise_for_status();
+    console.log(resp);
+    return {
+      etag: resp.headers.get("ETag") || "*",
+      content: await resp.text(),
+    };
+  }
+
+  async delete(path, etag) {
+    const {resp, raise_for_status} = await this.fetch(
+      `${schema.S3_BUCKET.get()}${schema.S3_PREFIX.get()}${path}`,
+      {
+        method: "DELETE",
+      }
+    );
+    raise_for_status();
+  }
+
+  async store_nonempty(path, content, etag) {
+    // TODO the S3 api just doesn't support anything like webdav's If-Match
+
+    const {resp, raise_for_status} = await this.fetch(
+      `${schema.S3_BUCKET.get()}${schema.S3_PREFIX.get()}${path}`,
+      {
+        method: "PUT",
+        body: content,
+      }
+    );
+    raise_for_status();
+
+    return {
+      etag: resp.headers.get("ETag") || "*",
+    };
+  }
 };
 
+
 const backend = (() => {
+  const backend_mapping = {
+    "none": NoneStorage,
+    "webdav": WebdavStorage,
+    "s3": S3Storage,
+  };
   const backend = backend_mapping[schema.STORAGE_TYPE.get()];
   if(backend === undefined) {
     reportError(
@@ -196,24 +283,24 @@ export async function load(path) {
   return result;
 }
 
-export async function store(path, content, etag) {
+export async function store(path, content, old_etag) {
   if(schema.READONLY.get()) {
-    console.log("[api]", path, "store blocked.", "etag:", etag);
+    console.log("[api]", path, "store blocked.", "etag:", old_etag);
     return;
   }
 
   if(content === "") {
-    await backend.delete(path, etag);
+    await backend.delete(path, old_etag);
     console.log("[api]", path, "cleared.", "etag:", null);
     return null;
   } else {
-    const new_etag = await backend.store_nonempty(path, content, etag);
+    const {etag} = await backend.store_nonempty(path, content, old_etag);
     console.log(
       "[api]",
       path, "stored.",
       "len:", content.length,
-      "etag:", new_etag,
+      "etag:", etag,
     );
-    return new_etag;
+    return etag;
   }
 }
