@@ -73,7 +73,7 @@ $.e = function(tag, attr, ...ch) {
       elem.setAttribute(kv[0], kv[1])
     }
   });
-  ch.forEach(e => {
+  ch.flat(Infinity).forEach(e => {
     if(!e) return;
     if(typeof(e) === "string") e = document.createTextNode(e);
     elem.appendChild(e)
