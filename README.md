@@ -4,17 +4,18 @@ Yet another wiki project, built from the ground up.
 This is inspired by the likes of [TiddlyWiki](https://tiddlywiki.com/) and [Logseq](https://logseq.com/), but designed from the ground up to address some of my gripes with them.
 It's wasn't originally meant for use by others, and isn't exactly that stable, but if you want to play around with it, definitely feel free to!
 
-As of 12 Nov 2021, I've been using this for around 6 months (see: [dogfooding](https://indieweb.org/selfdogfood)).
+As of 16 April 2022, I've been using this for almost a year (see: [dogfooding](https://indieweb.org/selfdogfood)).
 
-Note: There are currently issues with the autosave mechanism causing loss of data.
-ETag support is being worked on but is not completely stable (and is disabled by default).
-Additionally, some WebDAV servers (`rclone`'s in particular) do not support ETags.
+Note: the autosave mechanism does not have any protection against overwriting newer version of the file and causing data loss.
+This means that you should be very careful when you have multiple instances of this wiki open at the same time (e.g. across different devices).
 
 ## Running
 
 `ibis-wiki` requires a WebDAV server to operate, and the address of this will need to be set when you first use this wiki.
 A WebDAV server isn't included here, but any conforming server will suffice as long as the app is able to make requests to it -- it only needs a very minimal subset of the WebDAV API.
 Other than that, this wiki does not require any server-side setup.
+
+(There also is experimental S3 support, but it is missing documentation)
 
 ## CORS
 
@@ -33,3 +34,10 @@ Now, all requests to port 4002 will be forwarded to that URL.
 
 The main motivation behind this project was to use markdown as the document format, instead of alternatives that other wiki systems use.
 However, there are some additions to this to make it more "wiki-like", such as the use of `[[double brackets]]` for internal linking.
+
+There's a few experimental things here:
+
+- Using ETags to avoid writes that cause data loss.
+  Support for this is pretty spotty, and I haven't implemented any UI for actually dealing with a conflict.
+- S3 as the backing storage.
+  It works but I haven't tested it much.

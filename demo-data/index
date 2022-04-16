@@ -8,6 +8,8 @@ To open a card, use the search bar at the top! New cards are automatically creat
 
 In addition to the features provided by that library, links are also clickable! Try clicking the above link. Also, there are [[internal-links]] a la Roam Research (which was one of the inspirations for this).
 
+For more info have a look at <https://github.com/ralismark/ibis-wiki>.
+
 ## Further usage
 
 If you want to use this as an actual wiki, you'll need a [WebDAV] server that has [CORS] configured correctly (or alternatively: a WebDAV server and a cors proxy).
@@ -15,6 +17,8 @@ If you want to use this as an actual wiki, you'll need a [WebDAV] server that ha
 [WebDAV]: https://en.wikipedia.org/wiki/WebDAV
 [CORS]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 
-Then, open the Configuration Options below and set API_BASE to the URL of your server, including a trailing slash. You can also just use a subdirectory with e.g. `http://example.com/wiki/`.
+Then, open the Configuration Options below and set GET_URL and WEBDAV_URL to the URL of your server, including a trailing slash. You can also just use a subdirectory with e.g. `http://example.com/wiki/`. Then change STORAGE_TYPE to webdav, and reload.
+
+Alternatively, you can use any s3-compatible backend, but this has only been around since mid April 2022, and isn't as stable (or as documented) as using WebDAV.
 
 You can also customise what appears on startup by changing [[init.js]].
