@@ -17,18 +17,18 @@ export const Calendar = $.define("ibis-calendar", B => class Calendar extends B 
 
   async doRender() {
     const index = await DP.list();
-    console.log(index);
 
     const rows = [1,2,3,4,5,6,7].map(() => $.e("tr"));
-    const jan1 = new Date(today.getFullYear(), 0);
+    const startDate = new Date(today.getFullYear(), today.getMonth() - 4);
+    const endDate = new Date(today.getFullYear(), today.getMonth() + 2);
 
     // fill in gaps
-    for(let row of rows.slice(0, jan1.getDay())) {
+    for(let row of rows.slice(0, (startDate.getDay() + 6) % 7)) {
       row.append($.e("td"));
     }
 
-    for(let date = jan1;
-        date.getFullYear() == today.getFullYear();
+    for(let date = startDate;
+        date.getFullYear() != endDate.getFullYear() || date.getMonth() != endDate.getMonth();
         date.setDate(date.getDate() + 1)) {
       const name = shortdate(date);
 
@@ -44,7 +44,7 @@ export const Calendar = $.define("ibis-calendar", B => class Calendar extends B 
         "" + date.getDate()
       );
 
-      rows[date.getDay()].appendChild(tile);
+      rows[(date.getDay() + 6) % 7].appendChild(tile);
 
       if(index.includes(name)) {
         tile.classList.add("exists");
