@@ -50,6 +50,30 @@ ibis-view > .CodeMirror {
 	margin: 1rem 0;
 }
 
+	.cm-line {
+		clear: both;
+	}
+
+	.cm-link {
+		color: #0000ff;
+		text-decoration: underline;
+		cursor: pointer;
+	}
+
+	.cm-image-preview {
+		display: block;
+		width: 100%;
+		border-left: 2px solid teal;
+		padding: 0.5rem 0;
+	}
+
+		.cm-image-preview img {
+			display: block;
+			max-width: 100%;
+			max-height: 13rem;
+			margin: 0 auto;
+		}
+
 ibis-card {
 	display: block;
 	border: 1px solid rgba(127, 127, 127, 0.4);
@@ -112,12 +136,6 @@ ibis-search input {
 	padding: 0.3rem;
 	margin-bottom: 0.5rem;
 	border: 1px solid grey;
-}
-
-.cm-link {
-	color: #0000ff;
-	text-decoration: underline;
-	cursor: pointer;
 }
 
 #errors div {
