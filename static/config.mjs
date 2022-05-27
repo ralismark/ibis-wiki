@@ -32,37 +32,37 @@ export const schema = {
       "What storage type to use."
       + "\n- none: use GET_URL and in-memory storage for writing."
       + "\n- webdav: use WEBDAV_URL as a WebDAV backend."
-      + "\n- s3: use S3. Experimental",
+      + "\n- s3: use S3.",
     options: ["none", "webdav", "s3"],
     default: "none",
   },
   WEBDAV_URL: {
     help:
-      "(only used if STORAGE_TYPE=webdav)"
+      "(only for STORAGE_TYPE=webdav)"
       + "\nURL ending in a slash used for WebDAV access.",
     default: "",
   },
   S3_ACCESS_KEY_ID: {
     help:
-      "(only used if STORAGE_TYPE=s3)"
+      "(only for STORAGE_TYPE=s3)"
       + "\n(documentation missing)",
     default: "",
   },
   S3_SECRET_ACCESS_KEY: {
     help:
-      "(only used if STORAGE_TYPE=s3)"
+      "(only for STORAGE_TYPE=s3)"
       + "\n(documentation missing)",
     default: "",
   },
   S3_BUCKET: {
     help:
-      "(only used if STORAGE_TYPE=s3)"
+      "(only for STORAGE_TYPE=s3)"
       + "\nS3 url (with a trailing slash) used for requests.",
     default: "",
   },
   S3_PREFIX: {
     help:
-      "(only used if STORAGE_TYPE=s3)"
+      "(only for STORAGE_TYPE=s3)"
       + "\nPrefix to use for objects. Should end in a slash if you want everything in a subdirectory.",
     default: "",
   },

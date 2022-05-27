@@ -11,11 +11,11 @@ This means that you should be very careful when you have multiple instances of t
 
 ## Running
 
-`ibis-wiki` requires a WebDAV server to operate, and the address of this will need to be set when you first use this wiki.
-A WebDAV server isn't included here, but any conforming server will suffice as long as the app is able to make requests to it -- it only needs a very minimal subset of the WebDAV API.
-Other than that, this wiki does not require any server-side setup.
+See <https://ralismark.xyz/ibis-wiki/static/> for the actual website for this.
 
-(There also is experimental S3 support, but it is missing documentation)
+`ibis-wiki` will save and load documents from an external storage backend.
+The two kinds supported are **S3** (and S3-compatible APIs) and WebDAV.
+Other than that, you don't need to run anything yourself.
 
 ## CORS
 
@@ -39,5 +39,3 @@ There's a few experimental things here:
 
 - Using ETags to avoid writes that cause data loss.
   Support for this is pretty spotty, and I haven't implemented any UI for actually dealing with a conflict.
-- S3 as the backing storage.
-  It works but I haven't tested it much.
