@@ -1,5 +1,6 @@
 import {extensions as markdown} from "./cm-markdown.mjs";
 import basicSetup from "./cm-basicsetup.mjs";
+import {extensions as widgets} from "./cm-widgets.mjs";
 import {syncPlugin} from "./cm-sync.mjs";
 import * as api from "./api.mjs";
 import $ from "./dollar.mjs";
@@ -37,7 +38,7 @@ export const DP = (() => {
     const sync = syncPlugin(output, slug, text, etag);
     return EditorState.create({
       doc: text,
-      extensions: [markdown, sync, theme, basicSetup],
+      extensions: [markdown, widgets, sync, theme, basicSetup],
     });
   }
 
