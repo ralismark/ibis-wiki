@@ -1,13 +1,13 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import { DocumentProviderContext } from "../DocumentProvider";
+import { BackendContext } from "../backend";
 
 function IbisDatalist(props: {id: string}) {
+  const docs = useContext(BackendContext);
   const [list, setList] = useState<Array<string>>([]);
-  const docs = useContext(DocumentProviderContext);
 
   // load from document backend
   useEffect(() => {
-    docs!.list().then(setList);
+    setList([]);
   }, [docs]);
 
   return <datalist id={props.id}>

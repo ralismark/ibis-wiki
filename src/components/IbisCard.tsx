@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import CodeMirror from "./CodeMirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { DocumentProviderContext } from "../DocumentProvider";
+import { BackendContext } from "../backend";
 
 const loadingState = EditorState.create({
   doc: "loading...",
@@ -13,17 +13,17 @@ const loadingState = EditorState.create({
 });
 
 export default function IbisCard({ slug, onRemove }: { slug: string, onRemove: () => void }) {
-  const docs = useContext(DocumentProviderContext);
+  const docs = useContext(BackendContext);
   const [view, setView] = useState<EditorView | null>(null);
 
   useEffect(() => {
     if (!view) return;
 
     view.setState(loadingState);
-    docs!.open(slug).then(s => {
-      view.setState(s);
+    docs!.open(slug).then(f => {
+      view.setState(f.state());
     });
-  }, [view]);
+  }, [view, docs]);
 
   // Passing setView as ref to CodeMirror is so janky but it's the only way
   // that I've found which works...

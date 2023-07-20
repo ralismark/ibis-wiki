@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react"
 import "./config.css"
+import { LS_CONFIG_KEY } from "./globals";
 
-const LS_CONFIG_KEY = "config";
-
-export const enum StorageType {
+export const enum StoreType {
   None = "none",
   LocalStorage = "localstorage",
   S3 = "s3",
 }
 
 export type IbisConfig = {
-  storageType: StorageType,
+  storeType: StoreType,
   s3AccessKeyId: string,
   s3SecretAccessKey: string,
   s3Bucket: string,
@@ -18,11 +17,11 @@ export type IbisConfig = {
 }
 
 const DefaultIbisConfig: IbisConfig = {
-    storageType: StorageType.None,
-    s3AccessKeyId: "",
-    s3SecretAccessKey: "",
-    s3Bucket: "",
-    s3Prefix: ""
+  storeType: StoreType.None,
+  s3AccessKeyId: "",
+  s3SecretAccessKey: "",
+  s3Bucket: "",
+  s3Prefix: ""
 };
 
 function SaveConfig(cfg: IbisConfig) {
@@ -36,7 +35,7 @@ export function LoadConfig(): IbisConfig {
   if (!(loaded instanceof Object)) return DefaultIbisConfig;
 
   return {
-    storageType: loaded.storageType ?? "none",
+    storeType: loaded.storeType ?? "none",
     s3AccessKeyId: loaded.s3AccessKeyId ?? "",
     s3SecretAccessKey: loaded.s3SecretAccessKey ?? "",
     s3Bucket: loaded.s3Bucket ?? "",
@@ -46,7 +45,7 @@ export function LoadConfig(): IbisConfig {
 
 export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
   const cfg = useMemo(LoadConfig, []);
-  const [storageType, setStorageType] = useState(cfg.storageType);
+  const [storeType, setStoreType] = useState(cfg.storeType);
   const [s3AccessKeyId, setS3AccessKeyId] = useState(cfg.s3AccessKeyId);
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState(cfg.s3SecretAccessKey);
   const [s3Bucket, setS3Bucket] = useState(cfg.s3Bucket);
@@ -54,7 +53,7 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
 
   const handleSubmit = () => {
     const cfg: IbisConfig = {
-      storageType,
+      storeType,
       s3AccessKeyId,
       s3SecretAccessKey,
       s3Bucket,
@@ -74,16 +73,16 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
       <label>
         Backend
         <select
-          value={storageType}
-          onChange={e => setStorageType(e.target.value as StorageType)}
+          value={storeType}
+          onChange={e => setStoreType(e.target.value as StoreType)}
         >
-          <option value="none">(none)</option>
+          <option value="none">(ephemeral)</option>
           <option value="localstorage">Browser Storage</option>
-          <option disabled={true} value="s3">S3-compatible</option>
+          <option value="s3">S3-compatible</option>
         </select>
       </label>
 
-      <fieldset disabled={storageType !== StorageType.S3}>
+      <fieldset disabled={storeType !== StoreType.S3}>
         <legend>S3 Options</legend>
 
         <label>

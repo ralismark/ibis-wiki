@@ -1,10 +1,11 @@
 import { createContext, useMemo, useState } from "react";
 import IbisSearch from "./components/IbisSearch";
-import { LocalStorageBackend, MemoryBackend } from "./fs";
 import IbisCard from "./components/IbisCard";
 import "./App.css"
-import { DocumentProvider, DocumentProviderContext } from "./DocumentProvider";
-import { Config, IbisConfig, LoadConfig, StorageType } from "./config";
+import { Config, IbisConfig, LoadConfig, StoreType } from "./config";
+import { Backend, BackendContext } from "./backend";
+import { LoggingStore, LocalStorageStore, Store, InMemoryStore } from "./backend/store";
+import { S3Store } from "./backend/s3";
 
 export type IbisController = {
   open(path: string): void,
@@ -18,14 +19,26 @@ export function App() {
   const [config, setConfig] = useState<IbisConfig>(LoadConfig);
   const [openPages, setOpenPages] = useState<Array<string>>([]);
 
-  const docs = useMemo(() => {
-    switch (config.storageType) {
-      case StorageType.None:
-        return new DocumentProvider(new MemoryBackend());
-      case StorageType.LocalStorage:
-        return new DocumentProvider(new LocalStorageBackend());
-    }
-  }, [config])!;
+  const backend = useMemo(() => {
+    const store: Store = (() => {
+      switch (config.storeType) {
+        case StoreType.None:
+          return new InMemoryStore();
+        case StoreType.LocalStorage:
+          return new LocalStorageStore();
+        case StoreType.S3:
+          return new S3Store(config);
+        default:
+          throw Error("Invalid store type");
+      }
+    })();
+
+    return new Backend(
+      new LoggingStore(
+        store,
+      ),
+    );
+  }, [config]);
 
   const controller: IbisController = useMemo(() => ({
     open(path: string) {
@@ -41,7 +54,7 @@ export function App() {
   }), []);
 
   return <>
-    <DocumentProviderContext.Provider value={docs}>
+    <BackendContext.Provider value={backend}>
       <IbisController.Provider value={controller}>
         <IbisSearch
           onSubmit={path => controller.open(path)}
@@ -57,7 +70,7 @@ export function App() {
           }}
         />)}
       </IbisController.Provider>
-    </DocumentProviderContext.Provider>
+    </BackendContext.Provider>
     <Config onChange={setConfig} />
   </>
 }

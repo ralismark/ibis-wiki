@@ -2,9 +2,8 @@ import { EditorState } from "@codemirror/state";
 import { sleep } from "../utils";
 import { Store } from "./store";
 import viewSyncPlugin from "../codemirror/viewSyncPlugin";
-
-const LS_PREFIX = "ibis/buffer/"
-const DEBOUNCE_MS = 1000;
+import { createContext } from "react";
+import { DEBOUNCE_MS, LS_WRITE_BUFFER_PREFIX } from "../globals";
 
 export type Version = Date | null;
 
@@ -35,6 +34,7 @@ export class Backend {
 
   constructor(store: Store) {
     this.store = store;
+    console.log("Backend", this);
   }
 
   open(path: string): Promise<File> {
@@ -50,7 +50,7 @@ export class Backend {
     let runningPut: null | Promise<void> = null;
     const write = (content: string) => {
       localContent = content;
-      localStorage.setItem(LS_PREFIX + path, JSON.stringify({
+      localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
         content: localContent,
         version: remoteVer,
       }));
@@ -59,9 +59,10 @@ export class Backend {
 
       // returns whether we awaited at all
       const doPut = async(): Promise<boolean> => {
+        console.log("doPut");
         // NOTE if this becomes a bottleneck, try using @codemirror/state.Text?
         if (localContent === remoteContent) {
-          localStorage.removeItem(LS_PREFIX + path);
+          localStorage.removeItem(LS_WRITE_BUFFER_PREFIX + path);
           return false;
         }
 
@@ -75,7 +76,7 @@ export class Backend {
 
         remoteContent = localContent;
         // we need to update reference version
-        localStorage.setItem(LS_PREFIX + path, JSON.stringify({
+        localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
           content: localContent,
           version: remoteVer,
         }));
@@ -95,7 +96,7 @@ export class Backend {
     };
 
     // reload saved changes
-    const stored = localStorage.getItem(LS_PREFIX + path);
+    const stored = localStorage.getItem(LS_WRITE_BUFFER_PREFIX + path);
     if (stored) {
       const { content: savedContent, version: refVer } = JSON.parse(stored) as Snapshot;
 
@@ -132,3 +133,5 @@ export class Backend {
     };
   }
 }
+
+export const BackendContext = createContext<Backend | null>(null);
