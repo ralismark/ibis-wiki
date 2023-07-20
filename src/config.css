@@ -1,0 +1,16 @@
+form label,
+form fieldset {
+  display: block;
+  clear: both;
+}
+
+form label > input,
+form label > select {
+  float: right;
+}
+
+form fieldset[disabled] label,
+form fieldset[disabled] legend
+{
+  color: #808080;
+}

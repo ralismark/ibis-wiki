@@ -1,0 +1,70 @@
+/* css reset */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, div {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  padding-top: 1em;
+  padding-bottom: 100vh;
+}
+
+pre {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* everything else */
+main {
+  display: grid;
+  grid-template-columns: 1fr min(calc(100% - 1rem), 600px) 1fr;
+}
+
+main > * {
+  grid-column: 2;
+}
+
+.ibis-search {
+  width: 100%;
+  padding: 0.3rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid grey;
+}
+
+.ibis-card {
+  width: 100%;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 4px;
+  padding: 0 1rem 1rem;
+  margin: 1rem auto;
+
+  transition: background 1s;
+}
+
+.ibis-card > h1 {
+  overflow-wrap: anywhere;
+
+  position: sticky;
+  top: 0;
+
+  margin: 0.5rem 0;
+  padding: 0.5rem 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.3);
+
+  font-size: 2em;
+}
+
+.ibis-card > h1 [role=button] {
+  cursor: pointer;
+  float: right;
+  margin: 0 .2em;
+  line-height: 100%;
+  text-decoration: none;
+}
