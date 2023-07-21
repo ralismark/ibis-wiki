@@ -28,6 +28,40 @@ function saveConfig(cfg: IbisConfig) {
   localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(cfg));
 }
 
+// Migrate config from v1 format
+function tryMigrateConfigV1() {
+  if (localStorage.getItem(LS_CONFIG_KEY) !== null) return; // already have new-format config
+
+  const cfg: {[k: string]: any} = {
+    ...DefaultIbisConfig,
+    storeType: localStorage.getItem("STORAGE_TYPE") === "\"s3" ? StoreType.S3 : DefaultIbisConfig.storeType,
+  };
+  for (let [from, to] of [
+    ["S3_ACCESS_KEY_ID", "s3AccessKeyId"],
+    ["S3_SECRET_ACCESS_KEY", "s3SecretAccessKey"],
+    ["S3_BUCKET", "s3Bucket"],
+    ["S3_PREFIX", "s3Prefix"],
+  ]) {
+    const val = JSON.parse(localStorage.getItem(from) ?? "null");
+    if (val) {
+      cfg[to] = val;
+    }
+  }
+
+  localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(cfg));
+
+  const oldKeys = [
+    "READONLY", "SAVE_INTERVAL", "DUPLICATE_CARDS", "ETAGS", "GET_URL",
+    "STORAGE_TYPE", "WEBDAV_URL", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY",
+    "S3_BUCKET", "S3_PREFIX",
+  ];
+
+  for (let key of oldKeys) {
+    localStorage.removeItem(key);
+  }
+}
+tryMigrateConfigV1();
+
 export function loadConfig(): IbisConfig {
   const raw = localStorage.getItem(LS_CONFIG_KEY);
   if (raw === null) return DefaultIbisConfig;
