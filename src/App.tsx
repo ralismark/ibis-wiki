@@ -10,6 +10,7 @@ import { ExternState } from "./extern";
 import { dateWeek, dateWeekYear, shortdate, today } from "./calendar";
 import { IbisListing } from "./components/IbisListing";
 import { IbisCalendar } from "./components/IbisCalendar";
+import demoData from "./demoData";
 
 export type IbisController = {
   open(path: string): void,
@@ -31,7 +32,7 @@ export function App() {
     const store: Store = (() => {
       switch (config.storeType) {
         case StoreType.None:
-          return new InMemoryStore();
+          return new InMemoryStore(demoData);
         case StoreType.LocalStorage:
           return new LocalStorageStore();
         case StoreType.S3:
