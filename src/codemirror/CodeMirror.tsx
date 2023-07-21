@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
+import "./CodeMirror.css"
 
 export default forwardRef(function CodeMirror({}, ref) {
   // Our current CodeMirror element is extremely janky, primarily due to

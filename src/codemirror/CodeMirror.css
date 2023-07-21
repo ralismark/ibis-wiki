@@ -1,0 +1,13 @@
+.cm-content {
+  font-family: "sans-serif";
+}
+
+.cm-focused {
+  outline: none !important;
+}
+
+.cm-ibis-link {
+  color: #0000ff;
+  text-decoration: underline;
+  cursor: pointer;
+}

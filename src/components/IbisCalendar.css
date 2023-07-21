@@ -1,0 +1,31 @@
+.ibis-calendar {
+  margin: 1rem auto;
+  font: 1em monospace;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.ibis-calendar td[data-month="1"]  { --bg: hsl(0,   100%, 90%); }
+.ibis-calendar td[data-month="2"]  { --bg: hsl(30,  100%, 90%); }
+.ibis-calendar td[data-month="3"]  { --bg: hsl(60,  100%, 90%); }
+.ibis-calendar td[data-month="4"]  { --bg: hsl(90,  100%, 90%); }
+.ibis-calendar td[data-month="5"]  { --bg: hsl(120, 100%, 90%); }
+.ibis-calendar td[data-month="6"]  { --bg: hsl(150, 100%, 90%); }
+.ibis-calendar td[data-month="7"]  { --bg: hsl(180, 100%, 90%); }
+.ibis-calendar td[data-month="8"]  { --bg: hsl(210, 100%, 90%); }
+.ibis-calendar td[data-month="9"]  { --bg: hsl(240, 100%, 90%); }
+.ibis-calendar td[data-month="10"] { --bg: hsl(270, 100%, 90%); }
+.ibis-calendar td[data-month="11"] { --bg: hsl(300, 100%, 90%); }
+.ibis-calendar td[data-month="12"] { --bg: hsl(330, 100%, 90%); }
+
+.ibis-calendar td {
+  width: 2ch;
+  text-align: right;
+  border: 1px solid var(--bg);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.ibis-calendar td:not([data-exists]) { color: transparent; }
+.ibis-calendar td[data-exists] { border: 1px solid grey; filter: saturate(3); }
+.ibis-calendar td[data-today] { filter: saturate(5); }

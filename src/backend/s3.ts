@@ -1,8 +1,5 @@
-import { Snapshot, Version } from ".";
-import { Store } from "./store";
+import { Store, Etag, ListEntry } from "./store";
 import { AwsClient } from "aws4fetch";
-
-// TODO more robust url handling
 
 export class S3Store implements Store {
   client: AwsClient;
@@ -28,43 +25,90 @@ export class S3Store implements Store {
     this.prefix = s3Prefix;
   }
 
-  async get(path: string): Promise<Snapshot> {
-    const r: Response = await this.client.fetch(`${this.bucket}${this.prefix}${path}`);
+  private constructUrl(pathname: string, params: { [key: string]: string } = {}): URL {
+    const url = new URL(this.bucket);
+    url.pathname = pathname;
+    for(let [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+    return url;
+  }
+
+  private childByTag(el: Element, tag: string): Element | null {
+    for (let child of el.children) {
+      if (child.tagName === tag) return child;
+    }
+    return null;
+  }
+
+  async list() {
+    const out: { [key: string]: ListEntry } = {};
+    const r: Response = await this.client.fetch(
+      this.constructUrl("", {
+        "list-type": "2",
+        prefix: this.prefix
+      })
+    );
+    if (!r.ok) throw r;
+    const doc = (new DOMParser).parseFromString(await r.text(), "text/xml");
+    for(let contents of doc.querySelectorAll("ListBucketResult > Contents")) {
+      const key = this.childByTag(contents, "Key")?.textContent;
+      if (!key) {
+        console.warn("No <Key> for Contents", contents);
+        continue;
+      }
+      if (!key.startsWith(this.prefix)) {
+        console.warn("Contents", contents, "has Key that doesn't start with prefix ", this.prefix);
+        continue;
+      }
+
+      const etag = this.childByTag(contents, "ETag")?.textContent;
+      if (!etag) {
+        console.warn("No <ETag> for Contents", contents);
+        continue;
+      }
+
+      out[key.substring(this.prefix.length)] = {
+        etag,
+      };
+    }
+    return out;
+  }
+  async get(path: string) {
+    const r: Response = await this.client.fetch(this.constructUrl(this.prefix + path));
     if (r.status === 404) return {
       content: "",
-      version: null,
+      etag: null,
     };
     if (!r.ok) throw r;
-    const lastModified = r.headers.get("Last-Modified");
     return {
       content: await r.text(),
-      version: lastModified ? new Date(lastModified) : new Date(),
+      etag: r.headers.get("ETag"),
     }
   }
-  async put(path: string, content: string, _refVer: Version): Promise<{ version: Version; }> {
+  async put(path: string, content: string, _etag: Etag) {
     const r: Response = await this.client.fetch(
-      `${this.bucket}${this.prefix}${path}`,
+      this.constructUrl(this.prefix + path),
       {
         method: "PUT",
         body: content,
       },
     );
     if (!r.ok) throw r;
-    const date = r.headers.get("Date");
     return {
-      version: date ? new Date(date) : new Date(),
+      etag: r.headers.get("ETag"),
     };
   }
-  async delete(path: string, _refVer: Version): Promise<{ version: Version; }> {
+  async delete(path: string, _etag: Etag) {
     const r: Response = await this.client.fetch(
-      `${this.bucket}${this.prefix}${path}`,
+      this.constructUrl(this.prefix + path),
       {
         method: "DELETE",
       },
     );
     if (!r.ok) throw r;
     return {
-      version: null,
+      etag: null,
     };
   }
 }

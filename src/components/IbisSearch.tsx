@@ -1,17 +1,15 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef } from "react";
 import { BackendContext } from "../backend";
+import { useAsync, useExtern } from "../extern";
 
 function IbisDatalist(props: {id: string}) {
-  const docs = useContext(BackendContext);
-  const [list, setList] = useState<Array<string>>([]);
+  const backend = useContext(BackendContext);
+  if (!backend) return <datalist id={props.id} />;
 
-  // load from document backend
-  useEffect(() => {
-    setList([]);
-  }, [docs]);
+  const list = useAsync(useExtern(backend.listing), {});
 
   return <datalist id={props.id}>
-    {list.map(l => <option key={l} value={l} />)}
+    {Object.entries(list).map(([k, _]) => <option key={k} value={k} />)}
   </datalist>
 }
 

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import CodeMirror from "./CodeMirror";
+import CodeMirror from "../codemirror/CodeMirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { BackendContext } from "../backend";

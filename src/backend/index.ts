@@ -4,23 +4,8 @@ import { Store } from "./store";
 import viewSyncPlugin from "../codemirror/viewSyncPlugin";
 import { createContext } from "react";
 import { DEBOUNCE_MS, LS_WRITE_BUFFER_PREFIX } from "../globals";
-
-export type Version = Date | null;
-
-export function verLess(a: Version, b: Version): boolean {
-  if (a === null) {
-    return b !== null;
-  } else if (b === null) {
-    return true;
-  } else {
-    return a < b;
-  }
-}
-
-export type Snapshot = {
-  content: string
-  version: Version,
-}
+import extensions from "../codemirror/extensions";
+import { ExternMemo } from "../extern";
 
 export interface File {
   // write(content: string): void
@@ -31,9 +16,13 @@ export interface File {
 export class Backend {
   pages: { [key: string]: Promise<File> } = {};
   readonly store: Store;
+  readonly listing: ExternMemo<Promise<{ [key: string]: {} }>>;
 
   constructor(store: Store) {
     this.store = store;
+    this.listing = new ExternMemo(async () => {
+      return await this.store.list();
+    });
     console.log("Backend", this);
   }
 
@@ -44,7 +33,7 @@ export class Backend {
   }
 
   private async makeFile(path: string): Promise<File> {
-    let { content: remoteContent, version: remoteVer } = await this.store.get(path);
+    let { content: remoteContent, etag: remoteEtag } = await this.store.get(path);
     let localContent: string = remoteContent;
 
     let runningPut: null | Promise<void> = null;
@@ -52,14 +41,13 @@ export class Backend {
       localContent = content;
       localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
         content: localContent,
-        version: remoteVer,
+        etag: remoteEtag,
       }));
 
       if (runningPut !== null) return;
 
       // returns whether we awaited at all
       const doPut = async(): Promise<boolean> => {
-        console.log("doPut");
         // NOTE if this becomes a bottleneck, try using @codemirror/state.Text?
         if (localContent === remoteContent) {
           localStorage.removeItem(LS_WRITE_BUFFER_PREFIX + path);
@@ -67,19 +55,23 @@ export class Backend {
         }
 
         if (localContent === "") {
-          const res = await this.store.delete(path, remoteVer);
-          remoteVer = res.version;
+          const res = await this.store.delete(path, remoteEtag);
+          remoteEtag = res.etag;
         } else {
-          const res = await this.store.put(path, localContent, remoteVer);
-          remoteVer = res.version;
+          const res = await this.store.put(path, localContent, remoteEtag);
+          remoteEtag = res.etag;
         }
-
-        remoteContent = localContent;
         // we need to update reference version
         localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
           content: localContent,
-          version: remoteVer,
+          etag: remoteEtag,
         }));
+
+        if ((localContent === "") != (remoteContent === "")) {
+          this.listing.signal();
+        }
+
+        remoteContent = localContent;
 
         return true;
       };
@@ -98,17 +90,10 @@ export class Backend {
     // reload saved changes
     const stored = localStorage.getItem(LS_WRITE_BUFFER_PREFIX + path);
     if (stored) {
-      const { content: savedContent, version: refVer } = JSON.parse(stored) as Snapshot;
-
-      if (verLess(remoteVer, refVer)) {
-        console.warn(
-          "We went back in time? Reference version for locally cached",
-          "changes ", refVer, " is older than remote version ", remoteVer,
-        )
-      }
+      const { content: savedContent, etag: refEtag } = JSON.parse(stored);
 
       // we have unsaved changes that were derived from refVer
-      if (verLess(refVer, remoteVer)) {
+      if (refEtag !== remoteEtag) {
         // !!! Merge conflict
         // TODO handle this without data loss. for now just lose changes
       } else {
@@ -123,6 +108,7 @@ export class Backend {
           state = newState;
           write(state.doc.toString());
         }),
+        extensions,
       ],
     });
 
