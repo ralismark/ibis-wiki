@@ -25,7 +25,7 @@ export function App() {
   const [openPages, setOpenPages] = useState<Array<string>>([
     "index",
     shortdate(today),
-    `y${dateWeekYear(today)}w${dateWeek(today)}`,
+    `y${dateWeekYear(today) % 100}w${dateWeek(today)}`,
   ]);
 
   const backend = useMemo(() => {
