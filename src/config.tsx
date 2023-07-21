@@ -24,27 +24,24 @@ const DefaultIbisConfig: IbisConfig = {
   s3Prefix: ""
 };
 
-function SaveConfig(cfg: IbisConfig) {
+function saveConfig(cfg: IbisConfig) {
   localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(cfg));
 }
 
-export function LoadConfig(): IbisConfig {
+export function loadConfig(): IbisConfig {
   const raw = localStorage.getItem(LS_CONFIG_KEY);
   if (raw === null) return DefaultIbisConfig;
   const loaded = JSON.parse(raw);
   if (!(loaded instanceof Object)) return DefaultIbisConfig;
 
   return {
-    storeType: loaded.storeType ?? "none",
-    s3AccessKeyId: loaded.s3AccessKeyId ?? "",
-    s3SecretAccessKey: loaded.s3SecretAccessKey ?? "",
-    s3Bucket: loaded.s3Bucket ?? "",
-    s3Prefix: loaded.s3Prefix ?? "",
+    ...DefaultIbisConfig,
+    ...loaded,
   }
 }
 
 export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
-  const cfg = useMemo(LoadConfig, []);
+  const cfg = useMemo(loadConfig, []);
   const [storeType, setStoreType] = useState(cfg.storeType);
   const [s3AccessKeyId, setS3AccessKeyId] = useState(cfg.s3AccessKeyId);
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState(cfg.s3SecretAccessKey);
@@ -59,7 +56,7 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
       s3Bucket,
       s3Prefix,
     };
-    SaveConfig(cfg);
+    saveConfig(cfg);
     props.onChange(cfg);
   };
 
