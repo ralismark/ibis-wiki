@@ -71,12 +71,12 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
     <summary>Configuration Options</summary>
     <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
       <label>
-        Backend
+        Storage
         <select
           value={storeType}
           onChange={e => setStoreType(e.target.value as StoreType)}
         >
-          <option value="none">(ephemeral)</option>
+          <option value="none">(demo/ephemeral)</option>
           <option value="localstorage">Browser Storage</option>
           <option value="s3">S3-compatible</option>
         </select>
