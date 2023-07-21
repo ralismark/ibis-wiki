@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import IbisSearch from "./components/IbisSearch";
 import IbisCard from "./components/IbisCard";
 import "./App.css"
-import { Config, IbisConfig, LoadConfig, StoreType } from "./config";
+import { Config, IbisConfig, loadConfig, StoreType } from "./config";
 import { Backend, BackendContext } from "./backend";
 import { LoggingStore, LocalStorageStore, Store, InMemoryStore } from "./backend/store";
 import { S3Store } from "./backend/s3";
@@ -21,7 +21,7 @@ export const IbisController = new ExternState<IbisController>({
 });
 
 export function App() {
-  const [config, setConfig] = useState<IbisConfig>(LoadConfig);
+  const [config, setConfig] = useState<IbisConfig>(loadConfig);
   const [openPages, setOpenPages] = useState<Array<string>>([
     "index",
     shortdate(today),
