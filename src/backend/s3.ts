@@ -25,13 +25,13 @@ export class S3Store implements Store {
     this.prefix = s3Prefix;
   }
 
-  private constructUrl(pathname: string, params: { [key: string]: string } = {}): URL {
+  private constructUrl(pathname: string, params: { [key: string]: string } = {}): string {
     const url = new URL(this.bucket);
     url.pathname = pathname;
     for(let [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);
     }
-    return url;
+    return url.toString();
   }
 
   private childByTag(el: Element, tag: string): Element | null {
