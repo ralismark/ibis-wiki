@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { Fragment, useContext } from "react";
 import { BackendContext } from "../backend";
 import { useAsync, useExtern } from "../extern";
 import { IbisController } from "../App";
@@ -15,7 +15,7 @@ export function IbisListing(props: {
   const filter = props.filter ?? (() => true);
 
   return <div className="ibis-listing">
-    {Object.entries(list).map(([k, _]) => filter(k) && <>
+    {Object.entries(list).map(([k, _]) => filter(k) && <Fragment key={k}>
       <a
         href=""
         onClick={e => {
@@ -26,6 +26,6 @@ export function IbisListing(props: {
         {k}
       </a>
       {" "}
-    </>)}
+    </Fragment>)}
   </div>
 }
