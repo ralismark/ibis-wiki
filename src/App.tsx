@@ -54,6 +54,15 @@ export function App() {
       setOpenPages(openPages => {
         if (openPages.includes(path)) {
           // TODO jump to it or sth
+          const card = document.querySelector(`.ibis-card[data-path="${path}"]`);
+          if (card) {
+            card.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
+            (document.activeElement as HTMLElement | undefined)?.blur();
+          }
+
           return openPages;
         } else {
           return [...openPages, path];
@@ -75,9 +84,9 @@ export function App() {
         onSubmit={path => controller.open(path)}
       />
 
-      {openPages.map((slug, i) => <IbisCard
-        key={slug}
-        slug={slug}
+      {openPages.map((path, i) => <IbisCard
+        key={path}
+        path={path}
         onRemove={() => {
           const copy = [...openPages];
           copy.splice(i, 1);
