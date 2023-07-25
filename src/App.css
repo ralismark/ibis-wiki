@@ -7,6 +7,7 @@
 html, body, div {
   margin: 0;
   padding: 0;
+  --content-width: min(calc(100% - 1rem), 600px);
 }
 
 body {
@@ -22,7 +23,7 @@ pre {
 /* everything else */
 main {
   display: grid;
-  grid-template-columns: 1fr min(calc(100% - 1rem), 600px) 1fr;
+  grid-template-columns: 1fr var(--content-width) 1fr;
 }
 
 main > * {
@@ -36,8 +37,28 @@ main > * {
   border: 1px solid grey;
 }
 
+.ibis-cards[data-layout-row] {
+  grid-column: 1 / 4;
+  display: flex;
+  flex-direction: row;
+  overflow-x: scroll;
+  gap: 0.5rem;
+}
+
+.ibis-cards[data-layout-row]::before, .ibis-cards[data-layout-row]::after {
+  content: "";
+  display: block;
+  width: calc((100vw - var(--content-width)) / 2 - 0.5rem);
+  flex-shrink: 0;
+}
+
+.ibis-cards[data-layout-row] .ibis-card {
+  width: var(--content-width);
+  flex-shrink: 0;
+  height: fit-content;
+}
+
 .ibis-card {
-  width: 100%;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 4px;
   padding: 0 1rem 1rem;

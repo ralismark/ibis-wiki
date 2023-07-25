@@ -15,32 +15,23 @@ const loadingState = EditorState.create({
 export default function IbisCard({ path, onRemove }: { path: string, onRemove: () => void }) {
   const docs = useContext(BackendContext);
   const [view, setView] = useState<EditorView | null>(null);
-  const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!view) return;
+    if (!view || !docs) return;
 
     view.setState(loadingState);
-    docs!.open(path).then(f => {
+    docs.open(path).then(f => {
       view.setState(f.state());
     });
   }, [view, docs]);
 
-  useEffect(() => {
-    ref.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-    (document.activeElement as HTMLElement | undefined)?.blur();
-  }, [ref]);
-
   // Passing setView as ref to CodeMirror is so janky but it's the only way
   // that I've found which works...
   return (
-    <article className="ibis-card" data-path={path} ref={ref}>
+    <article className="ibis-card" data-path={path}>
       <h1>
         {path}
-        <a href="#" role="button" onClick={onRemove}>×</a>
+        <a href="" role="button" onClick={e => { e.preventDefault(); onRemove() }}>×</a>
       </h1>
       <CodeMirror ref={setView} />
     </article>
