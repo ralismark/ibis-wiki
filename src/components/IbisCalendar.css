@@ -1,5 +1,14 @@
 .ibis-calendar {
-  margin: 1rem auto;
+  margin: 0.5rem auto;
+
+  grid-column: 1 / 4;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: scroll;
+}
+
+.ibis-calendar > table {
+  margin: 0 auto;
   font: 1em monospace;
   border-collapse: separate;
   border-spacing: 0;

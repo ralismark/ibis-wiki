@@ -27,6 +27,18 @@ export function App() {
     shortdate(today),
     `y${dateWeekYear(today) % 100}w${dateWeek(today)}`,
   ]);
+  const [focus, setFocus] = useState<string | null>(null);
+
+  useEffect(() => {
+    const card = document.querySelector(`.ibis-card[data-path="${focus}"]`);
+    if (card) {
+      card.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+      (document.activeElement as HTMLElement | undefined)?.blur();
+    }
+  }, [focus]);
 
   const backend = useMemo(() => {
     const store: Store = (() => {
@@ -53,21 +65,13 @@ export function App() {
     open(path: string) {
       setOpenPages(openPages => {
         if (openPages.includes(path)) {
-          // TODO jump to it or sth
-          const card = document.querySelector(`.ibis-card[data-path="${path}"]`);
-          if (card) {
-            card.scrollIntoView({
-              behavior: "smooth",
-              block: "nearest",
-            });
-            (document.activeElement as HTMLElement | undefined)?.blur();
-          }
-
           return openPages;
         } else {
           return [...openPages, path];
         }
       });
+
+      setFocus(path);
     },
   }), []);
 
@@ -84,15 +88,18 @@ export function App() {
         onSubmit={path => controller.open(path)}
       />
 
-      {openPages.map((path, i) => <IbisCard
-        key={path}
-        path={path}
-        onRemove={() => {
-          const copy = [...openPages];
-          copy.splice(i, 1);
-          setOpenPages(copy);
-        }}
-      />)}
+      <div className="ibis-cards" data-layout-row={config.layoutRow || undefined}>
+        {openPages.map((path, i) => <IbisCard
+          key={path}
+          path={path}
+          onRemove={() => {
+            const copy = [...openPages];
+            copy.splice(i, 1);
+            setOpenPages(copy);
+          }}
+        />)}
+      </div>
+
       <IbisListing
         filter={k => !k.match(/^\d{1,2}[A-Z][a-z][a-z]\d\d/)}
       />

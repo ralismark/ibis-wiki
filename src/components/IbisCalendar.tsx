@@ -25,29 +25,31 @@ export function IbisCalendar(props: {
   const alignedStart = new Date(startDate);
   alignedStart.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
 
-  return <table className="ibis-calendar">
-    <tbody>
-      {[0, 1, 2, 3, 4, 5, 6].map(offset => {
-        const rowStart = new Date(alignedStart);
-        rowStart.setDate(rowStart.getDate() + offset);
-        return <tr key={offset}>
-          {Array.from(dateRange(rowStart, endDate, 7)).map(d => {
-            if (d < startDate) return <td key={d.getTime()}/>;
-            const name = shortdate(d);
-            return <td
-              key={d.getTime()}
-              title={name}
-              data-today={d.getTime() === today.getTime() || undefined}
-              data-exists={name in list || undefined}
-              data-month={d.getMonth()}
-              data-date={d.getDate()}
-              onClick={() => controller.open(name)}
-            >
-              {d.getDate()}
-            </td>
-          })}
-        </tr>;
-      })}
-    </tbody>
-  </table>
+  return <div className="ibis-calendar">
+    <table>
+      <tbody>
+        {[0, 1, 2, 3, 4, 5, 6].map(offset => {
+          const rowStart = new Date(alignedStart);
+          rowStart.setDate(rowStart.getDate() + offset);
+          return <tr key={offset}>
+            {Array.from(dateRange(rowStart, endDate, 7)).map(d => {
+              if (d < startDate) return <td key={d.getTime()}/>;
+              const name = shortdate(d);
+              return <td
+                key={d.getTime()}
+                title={name}
+                data-today={d.getTime() === today.getTime() || undefined}
+                data-exists={name in list || undefined}
+                data-month={d.getMonth()}
+                data-date={d.getDate()}
+                onClick={() => controller.open(name)}
+              >
+                {d.getDate()}
+              </td>
+            })}
+          </tr>;
+        })}
+      </tbody>
+    </table>
+  </div>
 }

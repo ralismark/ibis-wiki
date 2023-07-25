@@ -9,6 +9,7 @@ export const enum StoreType {
 }
 
 export type IbisConfig = {
+  layoutRow: boolean,
   storeType: StoreType,
   s3AccessKeyId: string,
   s3SecretAccessKey: string,
@@ -17,6 +18,7 @@ export type IbisConfig = {
 }
 
 const DefaultIbisConfig: IbisConfig = {
+  layoutRow: false,
   storeType: StoreType.None,
   s3AccessKeyId: "",
   s3SecretAccessKey: "",
@@ -76,6 +78,7 @@ export function loadConfig(): IbisConfig {
 
 export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
   const cfg = useMemo(loadConfig, []);
+  const [layoutRow, setLayoutRow] = useState(cfg.layoutRow);
   const [storeType, setStoreType] = useState(cfg.storeType);
   const [s3AccessKeyId, setS3AccessKeyId] = useState(cfg.s3AccessKeyId);
   const [s3SecretAccessKey, setS3SecretAccessKey] = useState(cfg.s3SecretAccessKey);
@@ -84,6 +87,7 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
 
   const handleSubmit = () => {
     const cfg: IbisConfig = {
+      layoutRow,
       storeType,
       s3AccessKeyId,
       s3SecretAccessKey,
@@ -101,6 +105,16 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
   return <details>
     <summary>Configuration Options</summary>
     <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+      <label>
+        Layout cards horizontally
+
+        <input
+          type="checkbox"
+          checked={layoutRow}
+          onChange={e => setLayoutRow(e.target.checked)}
+        />
+      </label>
+
       <label>
         Storage
         <select
