@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import CodeMirror from "../codemirror/CodeMirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { BackendContext } from "../backend";
 import { dateRange, shortdate, today } from "../calendar";
 import { useAsync, useExtern } from "../extern";
@@ -14,18 +14,37 @@ export function IbisCalendar(props: {
 
   const list = backend ? useAsync(useExtern(backend.listing), {}) : {};
 
-  // round down to start of day
-  const startDate = new Date(props.startDate);
-  startDate.setHours(0, 0, 0, 0);
-
-  const endDate = new Date(props.endDate);
-  endDate.setHours(0, 0, 0, 0);
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date(props.startDate);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const date = new Date(props.endDate);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  });
 
   // round down to start of week
   const alignedStart = new Date(startDate);
   alignedStart.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
 
+  const adjustMonth = (m: number) => (d: Date) => {
+    d = new Date(d);
+    d.setMonth(d.getMonth() + m);
+    return d;
+  };
+
   return <div className="ibis-calendar">
+    <div
+      role="button"
+      onClick={() => {
+        setStartDate(adjustMonth(-1));
+        setEndDate(adjustMonth(-1));
+      }}
+    >
+      <span>&lt;</span>
+    </div>
     <table>
       <tbody>
         {[0, 1, 2, 3, 4, 5, 6].map(offset => {
@@ -40,7 +59,8 @@ export function IbisCalendar(props: {
                 title={name}
                 data-today={d.getTime() === today.getTime() || undefined}
                 data-exists={name in list || undefined}
-                data-month={d.getMonth()}
+                data-month={d.getMonth() + 1}
+                data-year={d.getFullYear() % 100}
                 data-date={d.getDate()}
                 onClick={() => controller.open(name)}
               >
@@ -51,5 +71,14 @@ export function IbisCalendar(props: {
         })}
       </tbody>
     </table>
+    <div
+      role="button"
+      onClick={() => {
+        setStartDate(adjustMonth(1));
+        setEndDate(adjustMonth(1));
+      }}
+    >
+      <span>&gt;</span>
+    </div>
   </div>
 }
