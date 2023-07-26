@@ -1,40 +1,78 @@
 .ibis-calendar {
-  margin: 0.5rem auto;
+  margin: 0 auto;
+  padding: 1rem;
 
   grid-column: 1 / 4;
-  width: 100%;
-  max-width: 100%;
   overflow-x: scroll;
+  max-width: 100%;
+
+  display: flex;
+  position: relative;
 }
 
-.ibis-calendar > table {
-  margin: 0 auto;
+.ibis-calendar > [role=button] {
+  width: 2rem;
+  min-width: 2rem;
+  margin: 0.5rem;
+  background: rgba(128, 128, 128, 0.1);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+}
+
+.ibis-calendar table {
   font: 1em monospace;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.ibis-calendar td[data-month="1"]  { --bg: hsl(0,   100%, 90%); }
-.ibis-calendar td[data-month="2"]  { --bg: hsl(30,  100%, 90%); }
-.ibis-calendar td[data-month="3"]  { --bg: hsl(60,  100%, 90%); }
-.ibis-calendar td[data-month="4"]  { --bg: hsl(90,  100%, 90%); }
-.ibis-calendar td[data-month="5"]  { --bg: hsl(120, 100%, 90%); }
-.ibis-calendar td[data-month="6"]  { --bg: hsl(150, 100%, 90%); }
-.ibis-calendar td[data-month="7"]  { --bg: hsl(180, 100%, 90%); }
-.ibis-calendar td[data-month="8"]  { --bg: hsl(210, 100%, 90%); }
-.ibis-calendar td[data-month="9"]  { --bg: hsl(240, 100%, 90%); }
-.ibis-calendar td[data-month="10"] { --bg: hsl(270, 100%, 90%); }
-.ibis-calendar td[data-month="11"] { --bg: hsl(300, 100%, 90%); }
-.ibis-calendar td[data-month="12"] { --bg: hsl(330, 100%, 90%); }
+.ibis-calendar td[data-month="1"]  { --bg: 0;   --month-name: "Jan"; }
+.ibis-calendar td[data-month="2"]  { --bg: 30;  --month-name: "Feb"; }
+.ibis-calendar td[data-month="3"]  { --bg: 60;  --month-name: "Mar"; }
+.ibis-calendar td[data-month="4"]  { --bg: 90;  --month-name: "Apr"; }
+.ibis-calendar td[data-month="5"]  { --bg: 120; --month-name: "May"; }
+.ibis-calendar td[data-month="6"]  { --bg: 150; --month-name: "Jun"; }
+.ibis-calendar td[data-month="7"]  { --bg: 180; --month-name: "Jul"; }
+.ibis-calendar td[data-month="8"]  { --bg: 210; --month-name: "Aug"; }
+.ibis-calendar td[data-month="9"]  { --bg: 240; --month-name: "Sep"; }
+.ibis-calendar td[data-month="10"] { --bg: 270; --month-name: "Oct"; }
+.ibis-calendar td[data-month="11"] { --bg: 300; --month-name: "Nov"; }
+.ibis-calendar td[data-month="12"] { --bg: 330; --month-name: "Dec"; }
+
+.ibis-calendar td[data-date="1"]::before {
+  pointer-events: none;
+
+  display: block;
+  position: absolute;
+  top: 0;
+  z-index: 100;
+
+  content: var(--month-name);
+  color: initial;
+}
+
+.ibis-calendar td[data-date="1"]:first-child::before,
+.ibis-calendar td[data-date="1"][data-month="1"]::before
+{
+  content: var(--month-name) attr(data-year);
+}
 
 .ibis-calendar td {
-  width: 2ch;
+  min-width: 2ch;
   text-align: right;
-  border: 1px solid var(--bg);
-  background: var(--bg);
+  border: 1px solid hsl(var(--bg), 100%, 90%);
+  background: hsl(var(--bg), 100%, 90%);
   cursor: pointer;
 }
 
 .ibis-calendar td:not([data-exists]) { color: transparent; }
-.ibis-calendar td[data-exists] { border: 1px solid grey; filter: saturate(3); }
-.ibis-calendar td[data-today] { filter: saturate(5); }
+.ibis-calendar td[data-exists] {
+  border-color: grey;
+  background: hsl(var(--bg), 100%, 80%);
+}
+.ibis-calendar td[data-today] {
+  background: hsl(var(--bg), 100%, 50%);
+}

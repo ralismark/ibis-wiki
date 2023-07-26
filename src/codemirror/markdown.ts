@@ -114,7 +114,6 @@ export default new LanguageSupport(
         "InlineCode FencedCode CodeText": tags.monospace,
         "CodeInfo": tags.labelName, // TODO(2021-11-03) is this the right tag?
 
-
         // misc things
         "HorizontalRule": tags.contentSeparator,
         "Blockquote/...": tags.quote,
