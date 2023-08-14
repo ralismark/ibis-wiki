@@ -11,6 +11,8 @@ import { dateWeek, dateWeekYear, shortdate, today } from "./calendar";
 import { IbisListing } from "./components/IbisListing";
 import { IbisCalendar } from "./components/IbisCalendar";
 import demoData from "./demoData";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export type IbisController = {
   open(path: string): void,
@@ -105,5 +107,7 @@ export function App() {
       />
     </BackendContext.Provider>
     <Config onChange={setConfig} />
+
+    <ToastContainer />
   </>
 }
