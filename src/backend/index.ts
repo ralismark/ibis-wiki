@@ -6,6 +6,7 @@ import { createContext } from "react";
 import { DEBOUNCE_MS, LS_WRITE_BUFFER_PREFIX } from "../globals";
 import extensions from "../codemirror/extensions";
 import { ExternMemo } from "../extern";
+import { toast } from "react-toastify";
 
 export interface File {
   // write(content: string): void
@@ -96,6 +97,9 @@ export class Backend {
       if (refEtag !== remoteEtag) {
         // !!! Merge conflict
         // TODO handle this without data loss. for now just lose changes
+        toast.error(
+          `Merge conflict on ${path}\n${refEtag} -> ${remoteEtag}`
+        );
       } else {
         write(savedContent);
       }
