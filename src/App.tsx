@@ -47,6 +47,9 @@ export function App() {
     }
   }, [focus]);
 
+  // TODO React's strict mode causes us to create a duplicate backend, which
+  // might cause bad behaviour when dealing with unsaved changes
+
   const backend = useMemo(() => {
     const store: Store = (() => {
       switch (config.storeType) {

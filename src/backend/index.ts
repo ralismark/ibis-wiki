@@ -1,12 +1,13 @@
 import { EditorState, Text } from "@codemirror/state";
 import { sleep } from "../utils";
-import { Etag, Store } from "./store";
+import { Etag, EtagMismatchError, Store } from "./store";
 import { createContext } from "react";
 import { DEBOUNCE_MS, LsWal } from "../globals";
 import extensions from "../codemirror/extensions";
 import { ExternMemo } from "../extern";
 import { EditorStateRef } from "../codemirror/Controlled";
-import { endMerge, ofMerging, ofNotMerging } from "../codemirror/merge";
+import { endMerge, ofMerging, ofNotMerging, startMerge } from "../codemirror/merge";
+import { toast } from "react-toastify";
 
 export class File {
   readonly be: Backend
@@ -51,6 +52,7 @@ export class File {
     if (stored) {
       const { content: savedContent, etag: savedEtag } = JSON.parse(stored);
       if (savedEtag !== remoteEtag) {
+        // conflicted
         return new File(
           be,
           path,
@@ -123,21 +125,37 @@ export class File {
       if (this.baseEtag !== this.remoteEtag) return; // conflict, don't put
 
       const content = this.doc(); // the text that we're gonna put
-      const { etag } = content.eq(Text.empty)
-        ? await this.be.store.delete(this.path, this.baseEtag)
-        : await this.be.store.put(this.path, content.toString(), this.baseEtag);
+      try {
+        const { etag } = content.eq(Text.empty)
+          ? await this.be.store.delete(this.path, this.baseEtag)
+          : await this.be.store.put(this.path, content.toString(), this.baseEtag);
 
-      // TODO handle this conflicting
+        const listingChanged = (this.baseEtag === null) !== (etag === null);
 
-      const listingChanged = (this.baseEtag === null) !== (etag === null);
+        this.baseEtag = this.remoteEtag = etag;
 
-      this.baseEtag = this.remoteEtag = etag;
+        if (listingChanged) this.be.listing.signal();
 
-      if (listingChanged) this.be.listing.signal();
+        if (this.doc().eq(content)) {
+          // everything is up to date!
+          this.clearLS();
+          return;
+        }
+      } catch(e) {
+        if (e instanceof EtagMismatchError) {
+          // enter conflicted state
+          const { content, etag } = await this.be.store.get(this.path);
+          this.remoteEtag = etag;
+          this.isConflicting.signal();
+          this.esr.update({
+            effects: [startMerge(content)],
+          });
 
-      if (this.doc().eq(content)) {
-        // everything is up to date!
-        this.clearLS();
+          toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
+        } else {
+          toast.error(`Couldn't save "${this.path}": ${e}`)
+        }
+
         return;
       }
 
