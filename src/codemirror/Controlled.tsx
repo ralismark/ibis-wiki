@@ -5,18 +5,25 @@ import { Feed } from "../extern";
 
 export class EditorStateRef {
   private state: EditorState
-  private feed: Feed<[Transaction]> = new Feed();
+  private feed: Feed<[Transaction | EditorState]> = new Feed();
 
   constructor(state: EditorState) {
     this.state = state;
   }
 
-  subscribe(f: (tr: Transaction) => void): () => void {
+  subscribe(f: (tr: Transaction | EditorState) => void): () => void {
     return this.feed.subscribe(f);
   }
 
+  // Get the current EditorState. If this is called during a callback, the
+  // state is the new state.
   getState(): EditorState {
     return this.state;
+  }
+
+  setState(state: EditorState) {
+    this.state = state;
+    this.feed.signal(state);
   }
 
   update(tr: Transaction): void
@@ -37,7 +44,11 @@ export class EditorStateRef {
         dispatch: tr => this.update(tr),
       });
       const unsub = this.subscribe(tr => {
-        view.update([tr]);
+        if (tr instanceof EditorState) {
+          view.setState(tr)
+        } else {
+          view.update([tr]);
+        }
       });
 
       return () => {

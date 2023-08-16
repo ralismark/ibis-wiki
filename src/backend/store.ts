@@ -1,7 +1,7 @@
 import { LS_STORE_PREFIX } from "../globals"
 
 // tagged type
-export type Etag = any & { readonly __tag: unique symbol };
+export type Etag = (any & { readonly __tag: unique symbol });
 
 export type Snapshot = {
   content: string

@@ -13,6 +13,7 @@ import { IbisCalendar } from "./components/IbisCalendar";
 import demoData from "./demoData";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { LsWal } from "./globals";
 
 export type IbisController = {
   open(path: string): void,
@@ -24,11 +25,15 @@ export const IbisController = new ExternState<IbisController>({
 
 export function App() {
   const [config, setConfig] = useState<IbisConfig>(loadConfig);
-  const [openPages, setOpenPages] = useState<Array<string>>([
-    "index",
-    shortdate(today),
-    `y${dateWeekYear(today) % 100}w${dateWeek(today)}`,
-  ]);
+  const [openPages, setOpenPages] = useState<Array<string>>(() => {
+    const init = [
+      "index",
+      shortdate(today),
+      `y${dateWeekYear(today) % 100}w${dateWeek(today)}`,
+    ];
+    const wals = LsWal.keys().filter(f => !init.includes(f));
+    return [...init, ...wals]
+  });
   const [focus, setFocus] = useState<string | null>(null);
 
   useEffect(() => {

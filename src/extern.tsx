@@ -36,6 +36,16 @@ export function useExtern<T>(ext: Extern<T>): T {
   return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
 }
 
+// Like useExtern, but preserves hook ordering to make React happy
+export function useExternOr<T>(ext: Extern<T> | null | undefined, fallback: T): T {
+  if (ext) {
+    return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
+  } else {
+    useSyncExternalStore(() => () => {}, () => {});
+    return fallback;
+  }
+}
+
 export function useAsync<T>(promise: Promise<T>, fallback: T): T {
   const [val, setVal] = useState<T>(fallback);
   useEffect(() => {
