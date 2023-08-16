@@ -1,125 +1,200 @@
-import { EditorState } from "@codemirror/state";
+import { EditorState, Text } from "@codemirror/state";
 import { sleep } from "../utils";
-import { Store } from "./store";
+import { Etag, Store } from "./store";
 import { createContext } from "react";
-import { DEBOUNCE_MS, LS_WRITE_BUFFER_PREFIX } from "../globals";
+import { DEBOUNCE_MS, LsWal } from "../globals";
 import extensions from "../codemirror/extensions";
 import { ExternMemo } from "../extern";
-import { toast } from "react-toastify";
 import { EditorStateRef } from "../codemirror/Controlled";
+import { endMerge, ofMerging, ofNotMerging } from "../codemirror/merge";
 
-export interface File {
-  // write(content: string): void
-  // read(): string
-  state(): EditorStateRef
+export class File {
+  readonly be: Backend
+  readonly path: string
+
+  readonly esr: EditorStateRef
+
+  // Remote version we're derived from. Used to ensure we don't overwrite
+  // anything when we put (a bit like atomic compare-and-swap).
+  //
+  // When we're in a conflict, this won't be the latest version of remote we're
+  // aware of -- that's remoteEtag.
+  private baseEtag: Etag
+
+  // Latest version of remote we know about
+  private remoteEtag: Etag
+
+  // Whether we're in a conflicted state or not
+  readonly isConflicting = new ExternMemo(() => this.remoteEtag != this.baseEtag);
+
+  private constructor(
+    be: Backend,
+    path: string,
+    state: EditorState,
+    baseEtag: Etag,
+    remoteEtag: Etag,
+  ) {
+    this.be = be
+    this.path = path
+    this.esr = new EditorStateRef(state)
+    this.baseEtag = baseEtag
+    this.remoteEtag = remoteEtag
+
+    this.esr.subscribe(tr => {
+      if (tr instanceof EditorState || tr.docChanged) this.dirty()
+    });
+  }
+
+  static async new(be: Backend, path: string): Promise<File> {
+    const { content: remoteContent, etag: remoteEtag } = await be.store.get(path);
+    const stored = LsWal.getItem(path);
+    if (stored) {
+      const { content: savedContent, etag: savedEtag } = JSON.parse(stored);
+      if (savedEtag !== remoteEtag) {
+        return new File(
+          be,
+          path,
+          EditorState.create({
+            doc: savedContent,
+            extensions: [
+              extensions,
+              ofMerging(remoteContent),
+            ],
+          }),
+          savedEtag,
+          remoteEtag,
+        );
+      } else {
+        const f = new File(
+          be,
+          path,
+          EditorState.create({
+            doc: savedContent,
+            extensions: [
+              extensions,
+              ofNotMerging(),
+            ],
+          }),
+          savedEtag,
+          remoteEtag,
+        );
+        f.dirty();
+        return f;
+      }
+    } else {
+      return new File(
+        be,
+        path,
+        EditorState.create({
+          doc: remoteContent,
+          extensions: [
+            extensions,
+            ofNotMerging(),
+          ],
+        }),
+        remoteEtag,
+        remoteEtag,
+      )
+    }
+  }
+
+  private runningPut: null | Promise<void> = null
+
+  private dirty() {
+    this.writeLS();
+
+    if (this.runningPut !== null) return; // there is already a task running
+    this.runningPut = (async () => {
+      try {
+        await this.put();
+      } finally {
+        this.runningPut = null
+      }
+    })();
+  }
+
+  private async put() {
+    while (true) {
+      if (this.baseEtag !== this.remoteEtag) return; // conflict, don't put
+
+      await sleep(DEBOUNCE_MS);
+
+      // TODO is this one necessary?
+      if (this.baseEtag !== this.remoteEtag) return; // conflict, don't put
+
+      const content = this.doc(); // the text that we're gonna put
+      const { etag } = content.eq(Text.empty)
+        ? await this.be.store.delete(this.path, this.baseEtag)
+        : await this.be.store.put(this.path, content.toString(), this.baseEtag);
+
+      // TODO handle this conflicting
+
+      const listingChanged = (this.baseEtag === null) !== (etag === null);
+
+      this.baseEtag = this.remoteEtag = etag;
+
+      if (listingChanged) this.be.listing.signal();
+
+      if (this.doc().eq(content)) {
+        // everything is up to date!
+        this.clearLS();
+        return;
+      }
+
+      this.writeLS(); // update etag
+
+      // there's still differences, need to go around again
+    }
+  }
+
+  // End a conflict by committing the local version to remote
+  resolveConflict() {
+    if (this.baseEtag === this.remoteEtag) {
+      console.error("Attempting to resolveConflict on non-conflicting file", this)
+      return
+    }
+
+    this.baseEtag = this.remoteEtag
+    this.isConflicting.signal()
+    this.esr.update({
+      effects: [endMerge()],
+    })
+    this.dirty()
+  }
+
+  // helper functions
+  private doc(): Text {
+    return this.esr.getState().doc;
+  }
+
+  private writeLS() {
+    LsWal.setItem(this.path, JSON.stringify({
+      content: this.doc().toString(),
+      etag: this.baseEtag,
+    }));
+  }
+
+  private clearLS() {
+    LsWal.removeItem(this.path);
+  }
 }
 
 export class Backend {
   pages: { [key: string]: Promise<File> } = {};
   readonly store: Store;
-  readonly listing: ExternMemo<Promise<{ [key: string]: {} }>>;
+  readonly listing = new ExternMemo(async () => {
+    return await this.store.list();
+  });
 
   constructor(store: Store) {
     this.store = store;
-    this.listing = new ExternMemo(async () => {
-      return await this.store.list();
-    });
     console.log("Backend", this);
   }
 
   open(path: string): Promise<File> {
     if (!(path in this.pages))
-      this.pages[path] = this.makeFile(path);
+      this.pages[path] = File.new(this, path);
     return this.pages[path];
-  }
-
-  private async makeFile(path: string): Promise<File> {
-    let { content: remoteContent, etag: remoteEtag } = await this.store.get(path);
-    let localContent: string = remoteContent;
-
-    let state = new EditorStateRef(
-      EditorState.create({
-        doc: localContent,
-        extensions: [
-          extensions,
-        ],
-      })
-    );
-    state.subscribe(tr => write(tr.newDoc.toString()));
-
-    let runningPut: null | Promise<void> = null;
-    const write = (content: string) => {
-      localContent = content;
-      localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
-        content: localContent,
-        etag: remoteEtag,
-      }));
-
-      if (runningPut !== null) return;
-
-      // returns whether we awaited at all and should check if there's new changes
-      const doPut = async(): Promise<boolean> => {
-        // NOTE if this becomes a bottleneck, try using @codemirror/state.Text?
-        if (localContent === remoteContent) {
-          localStorage.removeItem(LS_WRITE_BUFFER_PREFIX + path);
-          return false;
-        }
-
-        if (localContent === "") {
-          const res = await this.store.delete(path, remoteEtag);
-          remoteEtag = res.etag;
-        } else {
-          const res = await this.store.put(path, localContent, remoteEtag);
-          remoteEtag = res.etag;
-        }
-        // we need to update reference version
-        localStorage.setItem(LS_WRITE_BUFFER_PREFIX + path, JSON.stringify({
-          content: localContent,
-          etag: remoteEtag,
-        }));
-
-        if ((localContent === "") != (remoteContent === "")) {
-          this.listing.signal();
-        }
-
-        remoteContent = localContent;
-
-        return true;
-      };
-
-      runningPut = (async () => {
-        try {
-          do {
-            await sleep(DEBOUNCE_MS);
-          } while(await doPut());
-        } finally {
-          runningPut = null;
-        }
-      })();
-    };
-
-    // reload saved changes
-    const stored = localStorage.getItem(LS_WRITE_BUFFER_PREFIX + path);
-    if (stored) {
-      const { content: savedContent, etag: refEtag } = JSON.parse(stored);
-
-      // we have unsaved changes that were derived from refVer
-      if (refEtag !== remoteEtag) {
-        // !!! Merge conflict
-        // TODO handle this without data loss. for now just lose changes
-        toast.error(
-          `Merge conflict on ${path}\n${refEtag} -> ${remoteEtag}`
-        );
-      } else {
-        write(savedContent);
-      }
-    }
-
-    return {
-      state() {
-        return state;
-      }
-    };
   }
 }
 

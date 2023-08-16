@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import "./config.css"
-import { LS_CONFIG_KEY } from "./globals";
+import { LsConfig } from "./globals";
 
 export const enum StoreType {
   None = "none",
@@ -27,12 +27,12 @@ const DefaultIbisConfig: IbisConfig = {
 };
 
 function saveConfig(cfg: IbisConfig) {
-  localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(cfg));
+  LsConfig.set(JSON.stringify(cfg));
 }
 
 // Migrate config from v1 format
 function tryMigrateConfigV1() {
-  if (localStorage.getItem(LS_CONFIG_KEY) !== null) return; // already have new-format config
+  if (LsConfig.get() !== null) return; // already have new-format config
 
   const cfg: {[k: string]: any} = {
     ...DefaultIbisConfig,
@@ -50,7 +50,7 @@ function tryMigrateConfigV1() {
     }
   }
 
-  localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(cfg));
+  LsConfig.set(JSON.stringify(cfg));
 
   const oldKeys = [
     "READONLY", "SAVE_INTERVAL", "DUPLICATE_CARDS", "ETAGS", "GET_URL",
@@ -65,7 +65,7 @@ function tryMigrateConfigV1() {
 tryMigrateConfigV1();
 
 export function loadConfig(): IbisConfig {
-  const raw = localStorage.getItem(LS_CONFIG_KEY);
+  const raw = LsConfig.get();
   if (raw === null) return DefaultIbisConfig;
   const loaded = JSON.parse(raw);
   if (!(loaded instanceof Object)) return DefaultIbisConfig;
