@@ -1,7 +1,13 @@
-import { LS_STORE_PREFIX } from "../globals"
+import { LsStore } from "../globals"
 
 // tagged type
 export type Etag = (any & { readonly __tag: unique symbol });
+
+export class EtagMismatchError extends Error {
+  constructor() {
+    super("Provided ETag did not match remote content");
+  }
+}
 
 export type Snapshot = {
   content: string
@@ -12,7 +18,6 @@ export type ListEntry = {
   etag: Etag,
 }
 
-// TODO exceptions for store operations
 export interface Store {
   list(): Promise<{ [key: string]: ListEntry }>
   get(path: string): Promise<Snapshot>
@@ -28,6 +33,10 @@ export class InMemoryStore implements Store {
       this.put(k, v, null);
     }
     console.log("NullStore", this);
+  }
+
+  private etag(path: string): Etag {
+    return path in this.files ? this.files[path].etag : null;
   }
 
   async list() {
@@ -46,8 +55,10 @@ export class InMemoryStore implements Store {
       version: null,
     };
   }
-  async put(path: string, content: string, _etag: Etag) {
-    const etag = (new Date()).valueOf();
+  async put(path: string, content: string, etag: Etag) {
+    if (etag !== this.etag(path)) throw new EtagMismatchError();
+
+    etag = (new Date()).valueOf();
     this.files[path] = {
       content,
       etag,
@@ -56,7 +67,9 @@ export class InMemoryStore implements Store {
       etag,
     };
   }
-  async delete(path: string, _etag: Etag) {
+  async delete(path: string, etag: Etag) {
+    if (etag !== this.etag(path)) throw new EtagMismatchError();
+
     delete this.files[path];
     return {
       etag: null,
@@ -104,19 +117,19 @@ export class LocalStorageStore implements Store {
 
   async list() {
     const out: { [key: string]: ListEntry } = {};
-    for (let i = 0; i < localStorage.length; ++i) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(LS_STORE_PREFIX)) {
-        const val: Snapshot = JSON.parse(localStorage.getItem(key)!);
-        out[key.substring(LS_STORE_PREFIX.length)] = {
-          etag: val.etag,
-        }
-      }
+
+    for (let [k, v] of LsStore.entries()) {
+      const val: Snapshot = JSON.parse(v);
+      out[k] = {
+        etag: val.etag,
+      };
     }
+
     return out;
   }
+
   async get(path: string) {
-    const stored = localStorage.getItem(LS_STORE_PREFIX + path);
+    const stored = LsStore.getItem(path);
     if (!stored) {
       return {
         content: "",
@@ -125,19 +138,25 @@ export class LocalStorageStore implements Store {
     }
     return JSON.parse(stored);
   }
-  async put(path: string, content: string, _etag: Etag) {
-    const etag = (new Date()).valueOf();
+
+  async put(path: string, content: string, etag: Etag) {
+    if (etag !== (await this.get(path)).etag) throw new EtagMismatchError();
+
+    etag = (new Date()).valueOf();
     const stored: Snapshot = {
       content,
       etag,
     };
-    localStorage.setItem(LS_STORE_PREFIX + path, JSON.stringify(stored));
+    LsStore.setItem(path, JSON.stringify(stored));
     return {
       etag,
     };
   }
-  async delete(path: string, _etag: Etag) {
-    localStorage.removeItem(LS_STORE_PREFIX + path);
+
+  async delete(path: string, etag: Etag) {
+    if (etag !== (await this.get(path)).etag) throw new EtagMismatchError();
+
+    LsStore.removeItem(path);
     return {
       etag: null,
     };
