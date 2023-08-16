@@ -4,7 +4,7 @@ export interface LocalStorageEntry {
   remove(): void
 }
 
-export class ScopedLocalStorage implements LocalStorageEntry, LocalStorageScope {
+export class ScopedLocalStorage implements LocalStorageEntry {
   readonly prefix: string
 
   constructor(prefix: string = "") {
