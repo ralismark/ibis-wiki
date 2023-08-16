@@ -23,5 +23,18 @@ const extensions: Extension = [
   ]),
   indentService.of(() => 0), // no indent
   indentUnit.of("    "), // 4-space indent
+  EditorView.theme({
+    "& .cm-content": {
+      fontFamily: "sans-serif",
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    "& .cm-ibis-link": {
+      color: "#0000ff",
+      textDecoration: "underline",
+      cursor: "pointer",
+    },
+  }),
 ];
 export default extensions;

@@ -5,24 +5,24 @@ export interface Extern<T> {
   getSnapshot(): T,
 }
 
-export class Feed {
-  private listeners: Map<Symbol, () => void> = new Map();
+export class Feed<Args extends unknown[] = []> {
+  private listeners: Map<Symbol, (...args: Args) => void> = new Map();
 
-  subscribe(onStoreChange: () => void) {
+  subscribe(f: (...args: Args) => void) {
     const key = Symbol();
-    this.listeners.set(key, onStoreChange);
+    this.listeners.set(key, f);
     return () => {
       this.listeners.delete(key);
     };
   }
 
-  signal() {
-    for (let v of this.listeners.values()) {
+  signal(...args: Args) {
+    for (let f of this.listeners.values()) {
       try {
-        v();
+        f(...args);
       } catch(e) {
-        // stop propagation of error
-        console.error("Subscriber threw exception", e);
+        // error boundary
+        console.error("Subscriber ", f, " threw exception ", e);
       }
     }
   }

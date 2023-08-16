@@ -1,17 +1,17 @@
 import { EditorState } from "@codemirror/state";
 import { sleep } from "../utils";
 import { Store } from "./store";
-import viewSyncPlugin from "../codemirror/viewSyncPlugin";
 import { createContext } from "react";
 import { DEBOUNCE_MS, LS_WRITE_BUFFER_PREFIX } from "../globals";
 import extensions from "../codemirror/extensions";
 import { ExternMemo } from "../extern";
 import { toast } from "react-toastify";
+import { EditorStateRef } from "../codemirror/Controlled";
 
 export interface File {
   // write(content: string): void
   // read(): string
-  state(): EditorState
+  state(): EditorStateRef
 }
 
 export class Backend {
@@ -37,6 +37,16 @@ export class Backend {
     let { content: remoteContent, etag: remoteEtag } = await this.store.get(path);
     let localContent: string = remoteContent;
 
+    let state = new EditorStateRef(
+      EditorState.create({
+        doc: localContent,
+        extensions: [
+          extensions,
+        ],
+      })
+    );
+    state.subscribe(tr => write(tr.newDoc.toString()));
+
     let runningPut: null | Promise<void> = null;
     const write = (content: string) => {
       localContent = content;
@@ -47,7 +57,7 @@ export class Backend {
 
       if (runningPut !== null) return;
 
-      // returns whether we awaited at all
+      // returns whether we awaited at all and should check if there's new changes
       const doPut = async(): Promise<boolean> => {
         // NOTE if this becomes a bottleneck, try using @codemirror/state.Text?
         if (localContent === remoteContent) {
@@ -104,17 +114,6 @@ export class Backend {
         write(savedContent);
       }
     }
-
-    let state = EditorState.create({
-      doc: localContent,
-      extensions: [
-        viewSyncPlugin(newState => {
-          state = newState;
-          write(state.doc.toString());
-        }),
-        extensions,
-      ],
-    });
 
     return {
       state() {
