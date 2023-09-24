@@ -1,7 +1,10 @@
 import { ETag, SummaryChanged } from "./store"
 import { IDB_FTSEARCH } from "../globals";
-import { assertUnreachable } from "../util";
+import { assertUnreachable, batched } from "../util";
 import { Snapshot } from "./store/bridge";
+import tokenise from "./tokenise"
+
+// based on <https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295>
 
 // Version of summaries. Bump this every time the scheme changes, to force refresh.
 const VERSION = 1
@@ -11,6 +14,8 @@ type FtsRow = {
   etag: ETag & string
   terms: string[]
 }
+
+console.log("tokenise", tokenise)
 
 export class FullTextSearch {
   private readonly db: Promise<IDBDatabase>
@@ -70,13 +75,9 @@ export class FullTextSearch {
     });
   }
 
-  private getTerms(content: string): string[] {
-    return [content.substring(0, 10)]
-  }
-
-  handleSummaryChanged(ev: SummaryChanged) {
+  async handleSummaryChanged(ev: SummaryChanged) {
     if (ev.type === "single") {
-      this.tr("fts", "readwrite", async tr => {
+      await this.tr("fts", "readwrite", async tr => {
         const fts = tr.objectStore("fts")
         const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
         if (etag !== ev.etag) {
@@ -84,7 +85,7 @@ export class FullTextSearch {
             const row: FtsRow = {
               path: ev.path,
               etag: ev.etag,
-              terms: this.getTerms(ev.content),
+              terms: tokenise(ev.content),
             }
             fts.put(row)
           } else {
@@ -95,60 +96,102 @@ export class FullTextSearch {
     } else if (ev.type === "all") {
       const remListing = new Map(ev.listing);
 
-      (async () => {
-        // figure out which rows we need to fetch
-        await this.tr("fts", "readwrite", async tr => {
+      // figure out which rows we need to fetch
+      await this.tr("fts", "readwrite", async tr => {
+        const fts = tr.objectStore("fts")
+        let r = fts.openCursor()
+        let cursor
+        while ((cursor = await this.r(r)) !== null) {
+          const row = cursor.value as FtsRow
+          const listing = remListing.get(row.path)
+
+          if (listing?.etag === null) {
+            console.log("[FTS]", "remove row:", row)
+            cursor.delete()
+          } else if (listing?.etag === row.etag) {
+            remListing.delete(row.path)
+          }
+
+          cursor.continue()
+        }
+      })
+
+      // fetch those rows
+      const rowsp = Array.from(remListing.keys()).map(async path => {
+        const snap = await this.fetcher(path)
+        if (snap.content === null) {
+          console.warn("fetched empty file for non-empty etag")
+          return null
+        }
+
+        const row: FtsRow = {
+          path,
+          etag: snap.etag!,
+          terms: tokenise(snap.content),
+        }
+        console.log("[FTS]", "insert row:", row)
+        return row
+      })
+
+      // insert those rows
+      await batched(
+        rowsp,
+        rows => this.tr("fts", "readwrite", tr => {
           const fts = tr.objectStore("fts")
-          let r = fts.openCursor()
-          let cursor
-          while ((cursor = await this.r(r)) !== null) {
-            const row = cursor.value as FtsRow
-            const listing = remListing.get(row.path)
-            if (listing?.etag === null) {
-              console.log("[FTS]", "gone:", row.path)
-              cursor.delete()
-            } else if (listing?.etag === row.etag) {
-              console.log("[FTS]", "same:", row.path)
-              remListing.delete(row.path)
-            }
-
-            cursor.continue()
-          }
-        })
-
-        // fetch those rows
-        const rows = await Promise.allSettled(Array.from(remListing.keys()).map(async path => {
-          console.log("[FTS]", "change:", path)
-
-          const snap = await this.fetcher(path)
-          if (snap.content === null) {
-            console.warn("fetched empty file for non-empty etag")
-            return null
-          }
-
-          const row: FtsRow = {
-            path,
-            etag: snap.etag!,
-            terms: this.getTerms(snap.content),
-          }
-          console.log("[FTS]", "insert row:", row)
-          return row
-        }))
-
-
-        // insert those rows
-        await this.tr("fts", "readwrite", tr => {
-          const fts = tr.objectStore("fts")
-
-          for (let row of rows) {
-            if (row.status === "fulfilled") {
-              fts.put(row.value)
-            } else if (row.status === "rejected") {
-              console.error(row.reason)
-            } else assertUnreachable(row)
-          }
-        })
-      })()
+          for (const row of rows) fts.put(row)
+        }),
+        err => {
+          console.log(err)
+        }
+      )
     } else assertUnreachable(ev)
+  }
+
+  search(query: string): Promise<string[]> {
+    const terms = tokenise(query)
+    const out: string[] = []
+    if (!terms) return Promise.resolve(out)
+
+    return new Promise(async resolve => {
+      await this.tr("fts", "readonly", tr => {
+        const index = tr.objectStore("fts").index("terms")
+        let outstanding = 0
+        const reqs = terms.map(term => {
+          const r = index.openCursor(term)
+          ++outstanding
+          r.onsuccess = () => {
+            if (--outstanding === 0) barrier()
+          }
+          return r
+        })
+
+        function barrier() {
+          const cursors = reqs.map(r => r.result)
+          if (cursors.includes(null)) {
+            resolve(out)
+            return
+          }
+
+          let min: string = cursors[0]!.value.path
+          for (const c of cursors) {
+            if (indexedDB.cmp(c!.value.path, min) < 0) {
+              min = c!.value.path
+            }
+          }
+
+          let allMin = true
+          for (const c of cursors) {
+            if (c!.value.path === min) {
+              ++outstanding
+              c!.continue()
+            } else {
+              allMin = false
+            }
+          }
+
+          if (allMin) out.push(min)
+        }
+      })
+    })
   }
 }

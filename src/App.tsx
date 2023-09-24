@@ -105,6 +105,7 @@ export function App() {
     <IbisListing
       filter={k => !k.match(/^\d{1,2}[A-Z][a-z][a-z]\d\d/)}
     />
+
     <Config onChange={setConfig} />
 
     <ToastContainer />

@@ -37,6 +37,10 @@ main > * {
   border: 1px solid grey;
 }
 
+.ibis-listing > input {
+  width: 100%;
+}
+
 .ibis-cards[data-layout-row] {
   grid-column: 1 / 4;
   display: flex;
