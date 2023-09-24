@@ -1,29 +1,27 @@
-import { Fragment, useContext } from "react";
-import { BackendContext } from "../backend";
-import { useAsync, useExtern } from "../extern";
-import { IbisController } from "../App";
+import { Fragment } from "react"
+import { useExtern, useExternOr } from "../extern"
+import { IbisController } from "../App"
+import { FacadeExtern } from "../backend"
 
 export function IbisListing(props: {
   filter?: (path: string) => boolean,
 }) {
-  const backend = useContext(BackendContext);
-  if (!backend) return <div className="ibis-listing" />;
+  const controller = useExtern(IbisController)
+  const facade = useExtern(FacadeExtern);
+  const listing = useExternOr(facade?.listing, new Set());
 
-  const controller = useExtern(IbisController);
-
-  const list = useAsync(useExtern(backend.listing), {});
-  const filter = props.filter ?? (() => true);
+  const filter = props.filter ?? (() => true)
 
   return <div className="ibis-listing">
-    {Object.entries(list).map(([k, _]) => filter(k) && <Fragment key={k}>
+    {Array.from(listing).map(path => filter(path) && <Fragment key={path}>
       <a
         href=""
         onClick={e => {
-          e.preventDefault();
-          controller.open(k);
+          e.preventDefault()
+          controller.open(path)
         }}
       >
-        {k}
+        {path}
       </a>
       {" "}
     </Fragment>)}

@@ -1,15 +1,13 @@
-import { useContext, useRef } from "react";
-import { BackendContext } from "../backend";
-import { useAsync, useExtern } from "../extern";
+import { useRef } from "react"
+import { useExtern, useExternOr } from "../extern";
+import { FacadeExtern } from "../backend";
 
 function IbisDatalist(props: {id: string}) {
-  const backend = useContext(BackendContext);
-  if (!backend) return <datalist id={props.id} />;
-
-  const list = useAsync(useExtern(backend.listing), {});
+  const facade = useExtern(FacadeExtern);
+  const listing = useExternOr(facade?.listing, new Set());
 
   return <datalist id={props.id}>
-    {Object.entries(list).map(([k, _]) => <option key={k} value={k} />)}
+    {Array.from(listing).map(path => <option key={path} value={path} />)}
   </datalist>
 }
 

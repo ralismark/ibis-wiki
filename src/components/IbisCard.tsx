@@ -1,14 +1,14 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { File, BackendContext } from "../backend";
+import { useEffect, useRef, useState } from "react";
+import { FacadeExtern, File } from "../backend";
 import { useExtern, useExternOr } from "../extern";
 
 export default function IbisCard({ path, onRemove }: { path: string, onRemove: () => void }) {
-  const docs = useContext(BackendContext);
+  const facade = useExtern(FacadeExtern)
   const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
-    docs?.open(path).then(f => setFile(f));
-  }, [docs]);
+    facade?.files.open(path).then(f => setFile(f));
+  }, [facade]);
 
   const ref = useRef(null);
   const conflicting = useExternOr(file?.isConflicting, false);
