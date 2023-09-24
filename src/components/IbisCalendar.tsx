@@ -1,18 +1,17 @@
-import { useContext, useState } from "react";
-import { BackendContext } from "../backend";
-import { dateRange, shortdate, today } from "../calendar";
-import { useAsync, useExtern } from "../extern";
+import { useState } from "react";
+import { dateRange, shortdate, today } from "../util/calendar";
+import { useExtern, useExternOr } from "../extern";
 import { IbisController } from "../App";
 import "./IbisCalendar.css"
+import { FacadeExtern } from "../backend";
 
 export function IbisCalendar(props: {
   startDate: Date,
   endDate: Date,
 }) {
-  const backend = useContext(BackendContext);
   const controller = useExtern(IbisController);
-
-  const list = backend ? useAsync(useExtern(backend.listing), {}) : {};
+  const facade = useExtern(FacadeExtern);
+  const listing = useExternOr(facade?.listing, new Set());
 
   const [startDate, setStartDate] = useState(() => {
     const date = new Date(props.startDate);
@@ -58,7 +57,7 @@ export function IbisCalendar(props: {
                 key={d.getTime()}
                 title={name}
                 data-today={d.getTime() === today.getTime() || undefined}
-                data-exists={name in list || undefined}
+                data-exists={listing.has(name) || undefined}
                 data-month={d.getMonth() + 1}
                 data-year={d.getFullYear() % 100}
                 data-date={d.getDate()}

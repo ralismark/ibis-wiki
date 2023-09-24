@@ -2,26 +2,28 @@ import { useEffect, useMemo, useState } from "react";
 import IbisSearch from "./components/IbisSearch";
 import IbisCard from "./components/IbisCard";
 import "./App.css"
-import { Config, IbisConfig, loadConfig, StoreType } from "./config";
-import { Backend, BackendContext } from "./backend";
-import { LoggingStore, LocalStorageStore, Store, InMemoryStore } from "./backend/store";
-import { S3Store } from "./backend/s3";
+import { Config, IbisConfig, loadConfig } from "./config";
+import { Facade, FacadeExtern } from "./backend";
 import { ExternState } from "./extern";
-import { dateWeek, dateWeekYear, shortdate, today } from "./calendar";
+import { dateWeek, dateWeekYear, shortdate, today } from "./util/calendar";
 import { IbisListing } from "./components/IbisListing";
 import { IbisCalendar } from "./components/IbisCalendar";
-import demoData from "./demoData";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { LsWal } from "./globals";
 
 export type IbisController = {
-  open(path: string): void,
+  // ui bits
+  open(path: string): void
 }
 
-export const IbisController = new ExternState<IbisController>({
-  open() { throw new Error("No Ibis Context") }
-});
+const DummyIbisController: IbisController = {
+  open(_path: string) {},
+}
+
+// This needs to be a global since we need to access it from CodeMirror
+// widgets, which aren't managed within react.
+export const IbisController = new ExternState<IbisController>(DummyIbisController);
 
 export function App() {
   const [config, setConfig] = useState<IbisConfig>(loadConfig);
@@ -34,8 +36,8 @@ export function App() {
     const wals = LsWal.keys().filter(f => !init.includes(f));
     return [...init, ...wals]
   });
-  const [focus, setFocus] = useState<string | null>(null);
 
+  const [focus, setFocus] = useState<string | null>(null);
   useEffect(() => {
     const card = document.querySelector(`.ibis-card[data-path="${focus}"]`);
     if (card) {
@@ -50,26 +52,14 @@ export function App() {
   // TODO React's strict mode causes us to create a duplicate backend, which
   // might cause bad behaviour when dealing with unsaved changes
 
-  const backend = useMemo(() => {
-    const store: Store = (() => {
-      switch (config.storeType) {
-        case StoreType.None:
-          return new InMemoryStore(demoData);
-        case StoreType.LocalStorage:
-          return new LocalStorageStore();
-        case StoreType.S3:
-          return new S3Store(config);
-        default:
-          throw Error("Invalid store type");
-      }
-    })();
-
-    return new Backend(
-      new LoggingStore(
-        store,
-      ),
-    );
+  const facade: Facade = useMemo(() => {
+    return Facade.fromConfig(config);
   }, [config]);
+
+  useEffect(() => {
+    FacadeExtern.set(facade)
+    return () => FacadeExtern.set(null)
+  }, [facade]);
 
   const controller: IbisController = useMemo(() => ({
     open(path: string) {
@@ -85,35 +75,36 @@ export function App() {
     },
   }), []);
 
-  useEffect(() => IbisController.set(controller), [controller]);
+  useEffect(() => {
+    IbisController.set(controller)
+    return () => IbisController.set(DummyIbisController)
+  }, [controller]);
 
   return <>
-    <BackendContext.Provider value={backend}>
-      <IbisCalendar
-        startDate={new Date(today.getFullYear(), today.getMonth() - 4)}
-        endDate={new Date(today.getFullYear(), today.getMonth() + 2)}
-      />
+    <IbisCalendar
+      startDate={new Date(today.getFullYear(), today.getMonth() - 4)}
+      endDate={new Date(today.getFullYear(), today.getMonth() + 2)}
+    />
 
-      <IbisSearch
-        onSubmit={path => controller.open(path)}
-      />
+    <IbisSearch
+      onSubmit={path => controller.open(path)}
+    />
 
-      <div className="ibis-cards" data-layout-row={config.layoutRow || undefined}>
-        {openPages.map((path, i) => <IbisCard
-          key={path}
-          path={path}
-          onRemove={() => {
-            const copy = [...openPages];
-            copy.splice(i, 1);
-            setOpenPages(copy);
-          }}
-        />)}
-      </div>
+    <div className="ibis-cards" data-layout-row={config.layoutRow || undefined}>
+      {openPages.map((path, i) => <IbisCard
+        key={path}
+        path={path}
+        onRemove={() => {
+          const copy = [...openPages];
+          copy.splice(i, 1);
+          setOpenPages(copy);
+        }}
+      />)}
+    </div>
 
-      <IbisListing
-        filter={k => !k.match(/^\d{1,2}[A-Z][a-z][a-z]\d\d/)}
-      />
-    </BackendContext.Provider>
+    <IbisListing
+      filter={k => !k.match(/^\d{1,2}[A-Z][a-z][a-z]\d\d/)}
+    />
     <Config onChange={setConfig} />
 
     <ToastContainer />

@@ -1,219 +1,61 @@
-import { EditorState, Text } from "@codemirror/state";
-import { sleep } from "../utils";
-import { Etag, EtagMismatchError, Store } from "./store";
-import { createContext } from "react";
-import { DEBOUNCE_MS, LsWal } from "../globals";
-import extensions from "../codemirror/extensions";
-import { ExternMemo } from "../extern";
-import { EditorStateRef } from "../codemirror/Controlled";
-import { endMerge, ofMerging, ofNotMerging, startMerge } from "../codemirror/merge";
-import { toast } from "react-toastify";
+import { ExternState } from "../extern";
+import { IStore, InMemoryStore, LocalStorageStore, S3Store, Store, SummaryChanged } from "./store";
+import { assertUnreachable } from "../util";
+import { Files } from "./files";
+import { IbisConfig, StoreType } from "../config";
+import demoData from "../demoData";
+import { FullTextSearch } from "./ftsearch";
 
-export class File {
-  readonly be: Backend
-  readonly path: string
+export { File } from "./file"
 
-  readonly esr: EditorStateRef
+export function storeFromConfig(config: IbisConfig): IStore {
+  switch (config.storeType) {
+    case StoreType.None:
+      return new InMemoryStore(demoData)
+    case StoreType.LocalStorage:
+      return new LocalStorageStore()
+    case StoreType.S3:
+      return new S3Store(config)
+    default:
+      assertUnreachable(config.storeType)
+  }
+}
 
-  // Remote version we're derived from. Used to ensure we don't overwrite
-  // anything when we put (a bit like atomic compare-and-swap).
-  //
-  // When we're in a conflict, this won't be the latest version of remote we're
-  // aware of -- that's remoteEtag.
-  private baseEtag: Etag
+export class Facade {
+  readonly store: Store
+  readonly files: Files
+  readonly listing = new ExternState(new Set<string>())
+  readonly fts: FullTextSearch = new FullTextSearch((path: string) => this.store.load(path))
 
-  // Latest version of remote we know about
-  private remoteEtag: Etag
+  constructor(provider: IStore) {
+    this.store = new Store(provider)
+    this.files = new Files(this.store)
 
-  // Whether we're in a conflicted state or not
-  readonly isConflicting = new ExternMemo(() => this.remoteEtag != this.baseEtag);
+    // NOTE I don't think we need to handle unsubscribe since everything should
+    // get garbage collected
+    this.store.subscribe(change => this.summaryChangeForListing(change))
+    this.store.subscribe(change => this.fts.handleSummaryChanged(change))
 
-  private constructor(
-    be: Backend,
-    path: string,
-    state: EditorState,
-    baseEtag: Etag,
-    remoteEtag: Etag,
-  ) {
-    this.be = be
-    this.path = path
-    this.esr = new EditorStateRef(state)
-    this.baseEtag = baseEtag
-    this.remoteEtag = remoteEtag
-
-    this.esr.subscribe(tr => {
-      if (tr instanceof EditorState || tr.docChanged) this.dirty()
-    });
+    this.store.refresh()
   }
 
-  static async new(be: Backend, path: string): Promise<File> {
-    const { content: remoteContent, etag: remoteEtag } = await be.store.get(path);
-    const stored = LsWal.getItem(path);
-    if (stored) {
-      const { content: savedContent, etag: savedEtag } = JSON.parse(stored);
-      if (savedEtag !== remoteEtag) {
-        // conflicted
-        return new File(
-          be,
-          path,
-          EditorState.create({
-            doc: savedContent,
-            extensions: [
-              extensions,
-              ofMerging(remoteContent),
-            ],
-          }),
-          savedEtag,
-          remoteEtag,
-        );
-      } else {
-        const f = new File(
-          be,
-          path,
-          EditorState.create({
-            doc: savedContent,
-            extensions: [
-              extensions,
-              ofNotMerging(),
-            ],
-          }),
-          savedEtag,
-          remoteEtag,
-        );
-        f.dirty();
-        return f;
-      }
-    } else {
-      return new File(
-        be,
-        path,
-        EditorState.create({
-          doc: remoteContent,
-          extensions: [
-            extensions,
-            ofNotMerging(),
-          ],
-        }),
-        remoteEtag,
-        remoteEtag,
-      )
-    }
+  static fromConfig(config: IbisConfig) {
+    return new Facade(storeFromConfig(config))
   }
 
-  private runningPut: null | Promise<void> = null
-
-  private dirty() {
-    this.writeLS();
-
-    if (this.runningPut !== null) return; // there is already a task running
-    this.runningPut = (async () => {
-      try {
-        await this.put();
-      } finally {
-        this.runningPut = null
-      }
-    })();
-  }
-
-  private async put() {
-    while (true) {
-      if (this.baseEtag !== this.remoteEtag) return; // conflict, don't put
-
-      await sleep(DEBOUNCE_MS);
-
-      // TODO is this one necessary?
-      if (this.baseEtag !== this.remoteEtag) return; // conflict, don't put
-
-      const content = this.doc(); // the text that we're gonna put
-      try {
-        const { etag } = content.eq(Text.empty)
-          ? await this.be.store.delete(this.path, this.baseEtag)
-          : await this.be.store.put(this.path, content.toString(), this.baseEtag);
-
-        const listingChanged = (this.baseEtag === null) !== (etag === null);
-
-        this.baseEtag = this.remoteEtag = etag;
-
-        if (listingChanged) this.be.listing.signal();
-
-        if (this.doc().eq(content)) {
-          // everything is up to date!
-          this.clearLS();
-          return;
-        }
-      } catch(e) {
-        if (e instanceof EtagMismatchError) {
-          // enter conflicted state
-          const { content, etag } = await this.be.store.get(this.path);
-          this.remoteEtag = etag;
-          this.isConflicting.signal();
-          this.esr.update({
-            effects: [startMerge(content)],
-          });
-
-          toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
+  private summaryChangeForListing(change: SummaryChanged) {
+    if (change.type === "single") {
+        const listing = new Set(this.listing.getSnapshot())
+        if (change.content) {
+          listing.add(change.path)
         } else {
-          toast.error(`Couldn't save "${this.path}": ${e}`)
+          listing.delete(change.path)
         }
-
-        return;
-      }
-
-      this.writeLS(); // update etag
-
-      // there's still differences, need to go around again
-    }
-  }
-
-  // End a conflict by committing the local version to remote
-  resolveConflict() {
-    if (this.baseEtag === this.remoteEtag) {
-      console.error("Attempting to resolveConflict on non-conflicting file", this)
-      return
-    }
-
-    this.baseEtag = this.remoteEtag
-    this.isConflicting.signal()
-    this.esr.update({
-      effects: [endMerge()],
-    })
-    this.dirty()
-  }
-
-  // helper functions
-  private doc(): Text {
-    return this.esr.getState().doc;
-  }
-
-  private writeLS() {
-    LsWal.setItem(this.path, JSON.stringify({
-      content: this.doc().toString(),
-      etag: this.baseEtag,
-    }));
-  }
-
-  private clearLS() {
-    LsWal.removeItem(this.path);
+        this.listing.set(listing)
+    } else if (change.type === "all") {
+        this.listing.set(new Set(change.listing.keys()))
+    } else assertUnreachable(change)
   }
 }
 
-export class Backend {
-  pages: { [key: string]: Promise<File> } = {};
-  readonly store: Store;
-  readonly listing = new ExternMemo(async () => {
-    return await this.store.list();
-  });
-
-  constructor(store: Store) {
-    this.store = store;
-    console.log("Backend", this);
-  }
-
-  open(path: string): Promise<File> {
-    if (!(path in this.pages))
-      this.pages[path] = File.new(this, path);
-    return this.pages[path];
-  }
-}
-
-export const BackendContext = createContext<Backend | null>(null);
+export const FacadeExtern = new ExternState<Facade | null>(null)

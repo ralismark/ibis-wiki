@@ -1,5 +1,5 @@
 import { unifiedMergeView } from "@codemirror/merge";
-import { Compartment, EditorState, Extension, StateEffect, Text } from "@codemirror/state"
+import { Compartment, EditorState, Text } from "@codemirror/state"
 
 const merging = new Compartment();
 
@@ -8,26 +8,15 @@ export function isMerging(state: EditorState) {
   return inner && !(inner instanceof Array && inner.length == 0);
 }
 
-export function ofNotMerging(): Extension {
-  return merging.of([]);
-}
+export function setMerging(remote: string | Text | null) {
+  const inner = remote ? [unifiedMergeView({ original: remote })] : [];
 
-export function ofMerging(remote: string | Text): Extension {
-  return merging.of([
-    unifiedMergeView({
-      original: remote,
-    }),
-  ]);
-}
-
-export function startMerge(remote: string | Text): StateEffect<unknown> {
-  return merging.reconfigure([
-    unifiedMergeView({
-      original: remote,
-    }),
-  ]);
-}
-
-export function endMerge(): StateEffect<unknown> {
-  return merging.reconfigure([]);
+  return {
+    get extension() {
+      return merging.of(inner)
+    },
+    get effect() {
+      return merging.reconfigure(inner)
+    },
+  }
 }

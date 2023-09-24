@@ -5,6 +5,30 @@ export interface Extern<T> {
   getSnapshot(): T,
 }
 
+export function useExtern<T>(ext: Extern<T>): T {
+  return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
+}
+
+// Like useExtern, but preserves hook ordering to make React happy
+export function useExternOr<T>(ext: Extern<T> | null | undefined, fallback: T): T {
+  if (ext) {
+    return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
+  } else {
+    useSyncExternalStore(() => () => {}, () => {});
+    return fallback;
+  }
+}
+
+export function useAsync<T>(promise: Promise<T>, fallback: T): T {
+  const [val, setVal] = useState<T>(fallback);
+  useEffect(() => {
+    promise.then(setVal);
+  }, [promise]);
+  return val;
+}
+
+// ----------------------------------------------------------------------------
+
 export class Feed<Args extends unknown[] = []> {
   private listeners: Map<Symbol, (...args: Args) => void> = new Map();
 
@@ -31,30 +55,6 @@ export class Feed<Args extends unknown[] = []> {
 export abstract class ExternBase<T> extends Feed implements Extern<T> {
   abstract getSnapshot(): T;
 }
-
-export function useExtern<T>(ext: Extern<T>): T {
-  return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
-}
-
-// Like useExtern, but preserves hook ordering to make React happy
-export function useExternOr<T>(ext: Extern<T> | null | undefined, fallback: T): T {
-  if (ext) {
-    return useSyncExternalStore(f => ext.subscribe(f), () => ext.getSnapshot());
-  } else {
-    useSyncExternalStore(() => () => {}, () => {});
-    return fallback;
-  }
-}
-
-export function useAsync<T>(promise: Promise<T>, fallback: T): T {
-  const [val, setVal] = useState<T>(fallback);
-  useEffect(() => {
-    promise.then(setVal);
-  }, [promise]);
-  return val;
-}
-
-// ----------------------------------------------------------------------------
 
 export class ExternState<T> extends ExternBase<T> {
   private value: T;

@@ -1,0 +1,61 @@
+classDiagram
+  class IStore {
+    <<interface>>
+    +list()
+    +get()
+    +put()
+    +delete()
+  }
+
+  IStore <|-- S3Store
+  IStore <|-- LocalStorageStore
+  IStore <|-- InMemoryStore
+
+  Store *-- IStore
+  class Store {
+    +load()
+    +write()
+    +refresh()
+    +subscribeChanges()
+  }
+
+  class File {
+    +path: string
+    +editorState: EditorState
+  }
+
+  File --> Store
+  Files *-- File
+
+  class Files {
+    +getFile()
+  }
+
+  class Listing {
+    +subscribeFileListing()
+  }
+
+  Listing --> Store
+
+  namespace React {
+    class App {
+      +openCards: string[]
+      +open()
+    }
+
+    class IbisCard
+    class IbisListing
+    class Config
+  }
+
+
+    App o-- Config
+  App o-- IbisCard
+  IbisCard ..> App: open
+  App o-- IbisListing
+  IbisListing ..> App: open
+
+  IbisCard ..> Files: getFile
+  IbisListing ..> Listing: subscribeFileListing
+
+  Config <.. Store: (Needs to reinit if changes)
