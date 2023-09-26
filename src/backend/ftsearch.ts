@@ -150,7 +150,7 @@ export class FullTextSearch {
   search(query: string): Promise<string[]> {
     const terms = tokenise(query)
     const out: string[] = []
-    if (!terms) return Promise.resolve(out)
+    if (terms.length === 0) return Promise.resolve(out)
 
     return new Promise(async resolve => {
       await this.tr("fts", "readonly", tr => {

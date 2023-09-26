@@ -1,0 +1,28 @@
+.ibis-card {
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 4px;
+  padding: 0 1rem 1rem;
+  margin: 1rem auto;
+
+  > h1 {
+
+    overflow-wrap: anywhere;
+
+    position: sticky;
+    top: 0;
+
+    margin: 0.5rem 0;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.3);
+
+    font-size: 2em;
+
+    [role=button] {
+      cursor: pointer;
+      float: right;
+      margin: 0 .2em;
+      line-height: 100%;
+      text-decoration: none;
+    }
+  }
+}

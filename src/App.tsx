@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import IbisSearch from "./components/IbisSearch";
-import IbisCard from "./components/IbisCard";
-import "./App.css"
+import { IbisSearch, IbisCard, IbisCalendar } from "./components"
 import { Config, IbisConfig, loadConfig } from "./config";
 import { Facade, FacadeExtern } from "./backend";
-import { ExternState } from "./extern";
+import { ExternState, useExtern, useExternOr } from "./extern";
 import { dateWeek, dateWeekYear, shortdate, today } from "./util/calendar";
-import { IbisListing } from "./components/IbisListing";
-import { IbisCalendar } from "./components/IbisCalendar";
+import { LsWal } from "./globals";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { LsWal } from "./globals";
+import "./App.css"
+import { NumSyncing } from "./backend/file";
 
 export type IbisController = {
   // ui bits
@@ -24,6 +22,52 @@ const DummyIbisController: IbisController = {
 // This needs to be a global since we need to access it from CodeMirror
 // widgets, which aren't managed within react.
 export const IbisController = new ExternState<IbisController>(DummyIbisController);
+
+function Navbar() {
+  // TODO aria for syncing icon
+
+  const syncing = useExtern(NumSyncing)
+
+  return <nav className="navbar">
+    <div className="left">
+    </div>
+    <div className="mid">
+      <IbisSearch />
+    </div>
+    <div className="right">
+      <div
+        className="dirty"
+        title={syncing ? syncing + " dirty" : "all synced!"}
+        aria-label="Dirty"
+        aria-checked={syncing > 0}
+      />
+    </div>
+  </nav>
+}
+
+function Listing() {
+  const controller = useExtern(IbisController)
+  const facade = useExtern(FacadeExtern)
+  const listing = useExternOr(facade?.listing, new Set());
+
+  const pat = /^\d{1,2}[A-Z][a-z][a-z]\d\d/
+
+  return <details className="all-cards">
+    <summary>All Cards</summary>
+    <ul>
+      {Array.from(listing)
+        .filter(path => !path.match(pat))
+        .map(path => <li>
+          <a
+            href=""
+            onClick={() => controller.open(path)}
+          >
+            {path}
+          </a>
+        </li>)}
+    </ul>
+  </details>
+}
 
 export function App() {
   const [config, setConfig] = useState<IbisConfig>(loadConfig);
@@ -81,13 +125,11 @@ export function App() {
   }, [controller]);
 
   return <>
+    <Navbar />
+
     <IbisCalendar
       startDate={new Date(today.getFullYear(), today.getMonth() - 4)}
       endDate={new Date(today.getFullYear(), today.getMonth() + 2)}
-    />
-
-    <IbisSearch
-      onSubmit={path => controller.open(path)}
     />
 
     <div className="ibis-cards" data-layout-row={config.layoutRow || undefined}>
@@ -102,9 +144,7 @@ export function App() {
       />)}
     </div>
 
-    <IbisListing
-      filter={k => !k.match(/^\d{1,2}[A-Z][a-z][a-z]\d\d/)}
-    />
+    <Listing />
 
     <Config onChange={setConfig} />
 

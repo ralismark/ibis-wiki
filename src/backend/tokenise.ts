@@ -9,3 +9,5 @@ export default function tokenise(text: string): string[] {
     .filter(t => t.out(nlp.its.type) === "word" && !t.out(nlp.its.stopWordFlag))
     .out(nlp.its.stem, nlp.as.unique)
 }
+
+console.log("tokenise", tokenise)

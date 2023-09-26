@@ -3,10 +3,12 @@ import { sleep } from "../util";
 import { Store, ETag, ETagMismatchError } from "./store";
 import { DEBOUNCE_MS, LsWal } from "../globals";
 import extensions from "../codemirror/extensions";
-import { ExternMemo } from "../extern";
+import { ExternMemo, ExternState } from "../extern";
 import { EditorStateRef } from "../codemirror/Controlled";
 import { setMerging } from "../codemirror/merge";
 import { toast } from "react-toastify";
+
+export const NumSyncing = new ExternState<number>(0)
 
 export class File {
   readonly path: string
@@ -182,6 +184,7 @@ export class File {
   }
 
   private writeLS() {
+    if (LsWal.getItem(this.path) === null) NumSyncing.set(NumSyncing.getSnapshot() + 1)
     LsWal.setItem(this.path, JSON.stringify({
       content: this.doc().toString(),
       etag: this.baseETag,
@@ -189,6 +192,7 @@ export class File {
   }
 
   private clearLS() {
+    if (LsWal.getItem(this.path) !== null) NumSyncing.set(NumSyncing.getSnapshot() - 1)
     LsWal.removeItem(this.path);
   }
 }
