@@ -1,26 +1,74 @@
-import { useRef } from "react"
-import { useExtern, useExternOr } from "../extern";
-import { FacadeExtern } from "../backend";
+import { useEffect, useMemo, useState } from "react"
+import "./IbisSearch.css"
+import { FacadeExtern } from "../backend"
+import { IbisController } from "../App"
+import { useExtern, useExternOr } from "../extern"
 
-function IbisDatalist(props: {id: string}) {
-  const facade = useExtern(FacadeExtern);
-  const listing = useExternOr(facade?.listing, new Set());
+type Suggestion = [string, JSX.Element, () => void]
 
-  return <datalist id={props.id}>
-    {Array.from(listing).map(path => <option key={path} value={path} />)}
-  </datalist>
-}
+export function IbisSearch() {
+  const controller = useExtern(IbisController)
+  const facade = useExtern(FacadeExtern)
+  const [queryOrig, setQuery] = useState("")
+  const query = queryOrig.trim()
 
-export default function IbisSearch(props: { onSubmit(path: string): void }) {
-  const searchBox = useRef<HTMLInputElement>(null);
-
-  return <form
-    onSubmit={e => {
-      e.preventDefault();
-      props.onSubmit(searchBox.current!.value);
+  const renderSug = ([key, content, cb]: Suggestion) => <li
+    key={key}
+    onClick={e => {
+      e.preventDefault()
+      cb()
+      setQuery("")
     }}
-  >
-    <IbisDatalist id="ibis-datalist" />
-    <input className="ibis-search" ref={searchBox} list="ibis-datalist" />
-  </form>
+  >{content}</li>
+
+  const listing = useExternOr(facade?.listing, new Set());
+  const listingSugs: Suggestion[] = useMemo(() => {
+    const parts = query.toLowerCase().split(/\s+/).filter(x => x !== "")
+    if (parts.length === 0) return []
+    return Array.from(listing)
+        .filter(path => parts.every(part => path.toLowerCase().includes(part)))
+        .map(path => [
+          "card-title/" + path,
+          <>{path}</>,
+          () => controller.open(path),
+        ])
+  }, [query, listing])
+
+  const [searchSugs, setSearchSugs] = useState<Suggestion[]>([])
+  useEffect(() => {
+    facade?.fts.search(query).then(results => {
+      setSearchSugs(results.map(path => [
+        "search/" + path,
+        <>{path}</>,
+        () => controller.open(path),
+      ]))
+    })
+  }, [facade, query])
+
+  return <search className="ibis-search">
+    <input
+      type="search"
+      value={queryOrig}
+      onChange={e => setQuery(e.target.value)}
+      autoComplete="off"
+      placeholder="Search"
+    />
+    {query && <div className="results">
+      <ul>
+        {renderSug(["", <>Open card "{query}"</>, () => controller.open(query)])}
+      </ul>
+      {listingSugs.length > 0 && <>
+        <p className="search-section">Title matches:</p>
+        <ul>
+          {listingSugs.map(renderSug)}
+        </ul>
+      </>}
+      {searchSugs.length > 0 && <>
+        <p className="search-section">Content matches:</p>
+        <ul>
+          {searchSugs.map(renderSug)}
+        </ul>
+      </>}
+    </div>}
+  </search>
 }

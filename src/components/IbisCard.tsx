@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { FacadeExtern, File } from "../backend";
 import { useExtern, useExternOr } from "../extern";
+import "./IbisCard.css"
 
-export default function IbisCard({ path, onRemove }: { path: string, onRemove: () => void }) {
+export function IbisCard({ path, onRemove }: { path: string, onRemove: () => void }) {
   const facade = useExtern(FacadeExtern)
   const [file, setFile] = useState<File | null>(null);
 

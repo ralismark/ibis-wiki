@@ -8,71 +8,73 @@
 
   display: flex;
   position: relative;
-}
 
-.ibis-calendar > [role=button] {
-  width: 2rem;
-  min-width: 2rem;
-  margin: 0.5rem;
-  background: rgba(128, 128, 128, 0.1);
+  & > [role=button] {
+    width: 2rem;
+    min-width: 2rem;
+    margin: 0.5rem;
+    background: rgba(128, 128, 128, 0.1);
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-  cursor: pointer;
-}
+    cursor: pointer;
+  }
 
-.ibis-calendar table {
-  font: 1em monospace;
-  border-collapse: separate;
-  border-spacing: 0;
-}
+  table {
+    font: 1em monospace;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
 
-.ibis-calendar td[data-month="1"]  { --bg: 0;   --month-name: "Jan"; }
-.ibis-calendar td[data-month="2"]  { --bg: 30;  --month-name: "Feb"; }
-.ibis-calendar td[data-month="3"]  { --bg: 60;  --month-name: "Mar"; }
-.ibis-calendar td[data-month="4"]  { --bg: 90;  --month-name: "Apr"; }
-.ibis-calendar td[data-month="5"]  { --bg: 120; --month-name: "May"; }
-.ibis-calendar td[data-month="6"]  { --bg: 150; --month-name: "Jun"; }
-.ibis-calendar td[data-month="7"]  { --bg: 180; --month-name: "Jul"; }
-.ibis-calendar td[data-month="8"]  { --bg: 210; --month-name: "Aug"; }
-.ibis-calendar td[data-month="9"]  { --bg: 240; --month-name: "Sep"; }
-.ibis-calendar td[data-month="10"] { --bg: 270; --month-name: "Oct"; }
-.ibis-calendar td[data-month="11"] { --bg: 300; --month-name: "Nov"; }
-.ibis-calendar td[data-month="12"] { --bg: 330; --month-name: "Dec"; }
+  td {
+    min-width: 2ch;
+    text-align: right;
+    border: 1px solid hsl(var(--bg), 100%, 90%);
+    background: hsl(var(--bg), 100%, 90%);
+    cursor: pointer;
+    color: black;
 
-.ibis-calendar td[data-date="1"]::before {
-  pointer-events: none;
+    &[data-month="1"]  { --bg: 0;   --month-name: "Jan"; }
+    &[data-month="2"]  { --bg: 30;  --month-name: "Feb"; }
+    &[data-month="3"]  { --bg: 60;  --month-name: "Mar"; }
+    &[data-month="4"]  { --bg: 90;  --month-name: "Apr"; }
+    &[data-month="5"]  { --bg: 120; --month-name: "May"; }
+    &[data-month="6"]  { --bg: 150; --month-name: "Jun"; }
+    &[data-month="7"]  { --bg: 180; --month-name: "Jul"; }
+    &[data-month="8"]  { --bg: 210; --month-name: "Aug"; }
+    &[data-month="9"]  { --bg: 240; --month-name: "Sep"; }
+    &[data-month="10"] { --bg: 270; --month-name: "Oct"; }
+    &[data-month="11"] { --bg: 300; --month-name: "Nov"; }
+    &[data-month="12"] { --bg: 330; --month-name: "Dec"; }
 
-  display: block;
-  position: absolute;
-  top: 0;
-  z-index: 100;
+    &[data-exists] {
+      border-color: grey;
+      background: hsl(var(--bg), 100%, 80%);
+    }
+    &:not([data-exists]) { color: transparent; }
 
-  content: var(--month-name);
-  color: initial;
-}
+    &[data-today] {
+      background: hsl(var(--bg), 100%, 50%);
+    }
+  }
 
-.ibis-calendar td[data-date="1"]:first-child::before,
-.ibis-calendar td[data-date="1"][data-month="1"]::before
-{
-  content: var(--month-name) attr(data-year);
-}
+  td[data-date="1"]::before {
+    pointer-events: none;
 
-.ibis-calendar td {
-  min-width: 2ch;
-  text-align: right;
-  border: 1px solid hsl(var(--bg), 100%, 90%);
-  background: hsl(var(--bg), 100%, 90%);
-  cursor: pointer;
-}
+    display: block;
+    position: absolute;
+    top: 0;
+    z-index: 10;
 
-.ibis-calendar td:not([data-exists]) { color: transparent; }
-.ibis-calendar td[data-exists] {
-  border-color: grey;
-  background: hsl(var(--bg), 100%, 80%);
-}
-.ibis-calendar td[data-today] {
-  background: hsl(var(--bg), 100%, 50%);
+    content: var(--month-name);
+    color: var(--body-fg);
+  }
+
+  td[data-date="1"]:first-child::before,
+  td[data-date="1"][data-month="1"]::before
+  {
+    content: var(--month-name) attr(data-year);
+  }
 }
