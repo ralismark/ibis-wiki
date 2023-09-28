@@ -57,10 +57,10 @@ function Listing() {
     <ul>
       {Array.from(listing)
         .filter(path => !path.match(pat))
-        .map(path => <li>
+        .map(path => <li key={path}>
           <a
             href=""
-            onClick={() => controller.open(path)}
+            onClick={e => { e.preventDefault(); controller.open(path) }}
           >
             {path}
           </a>

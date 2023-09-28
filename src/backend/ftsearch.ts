@@ -2,20 +2,19 @@ import { ETag, SummaryChanged } from "./store"
 import { IDB_FTSEARCH } from "../globals";
 import { assertUnreachable, batched } from "../util";
 import { Snapshot } from "./store/bridge";
-import tokenise from "./tokenise"
+import { tokenise, outlinks } from "./tokenise"
 
 // based on <https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295>
 
 // Version of summaries. Bump this every time the scheme changes, to force refresh.
-const VERSION = 1
+const VERSION = 2
 
 type FtsRow = {
   path: string
   etag: ETag & string
   terms: string[]
+  refs: string[]
 }
-
-console.log("tokenise", tokenise)
 
 export class FullTextSearch {
   private readonly db: Promise<IDBDatabase>
@@ -27,8 +26,14 @@ export class FullTextSearch {
       r.onsuccess = () => resolve(r.result);
       r.onerror = () => reject(r.error);
       r.onupgradeneeded = function() { // function to rebind this so we get the db
+        // delete all object stores
+        for (const os of this.result.objectStoreNames) {
+          this.result.deleteObjectStore(os)
+        }
+
         const store = this.result.createObjectStore("fts", { keyPath: "path" })
         store.createIndex("terms", "terms", { multiEntry: true })
+        store.createIndex("refs", "refs", { multiEntry: true })
       }
     })
     this.fetcher = fetcher
@@ -86,6 +91,7 @@ export class FullTextSearch {
               path: ev.path,
               etag: ev.etag,
               terms: tokenise(ev.content),
+              refs: outlinks(ev.content),
             }
             fts.put(row)
           } else {
@@ -128,6 +134,7 @@ export class FullTextSearch {
           path,
           etag: snap.etag!,
           terms: tokenise(snap.content),
+          refs: outlinks(snap.content),
         }
         console.log("[FTS]", "insert row:", row)
         return row
@@ -192,6 +199,16 @@ export class FullTextSearch {
           if (allMin) out.push(min)
         }
       })
+    })
+  }
+
+  backlinks(path: string): Promise<string[]> {
+    path = path.trim()
+    if (path === "") return Promise.resolve([])
+
+    return this.tr("fts", "readonly", async tr => {
+      const rows = await this.r(tr.objectStore("fts").index("refs").getAll(path));
+      return rows.map((r: FtsRow) => r.path)
     })
   }
 }
