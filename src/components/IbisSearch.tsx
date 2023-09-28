@@ -50,6 +50,9 @@ export function IbisSearch() {
       type="search"
       value={queryOrig}
       onChange={e => setQuery(e.target.value)}
+      onKeyDown={e => {
+        if (e.code === "Escape") setQuery("")
+      }}
       autoComplete="off"
       placeholder="Search"
     />
