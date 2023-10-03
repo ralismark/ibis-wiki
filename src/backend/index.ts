@@ -45,13 +45,20 @@ export class Facade {
 
   private summaryChangeForListing(change: SummaryChanged) {
     if (change.type === "single") {
-        const listing = new Set(this.listing.getSnapshot())
+        let listing = this.listing.getSnapshot()
         if (change.content) {
+          if (listing.has(change.path)) return;
+
+          listing = new Set(listing)
           listing.add(change.path)
+          this.listing.set(listing)
         } else {
+          if (!listing.has(change.path)) return;
+
+          listing = new Set(listing)
           listing.delete(change.path)
+          this.listing.set(listing)
         }
-        this.listing.set(listing)
     } else if (change.type === "all") {
         this.listing.set(new Set(change.listing.keys()))
     } else assertUnreachable(change)

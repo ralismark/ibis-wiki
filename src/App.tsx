@@ -23,10 +23,19 @@ const DummyIbisController: IbisController = {
 // widgets, which aren't managed within react.
 export const IbisController = new ExternState<IbisController>(DummyIbisController);
 
-function Navbar() {
+function SyncIndicator() {
   // TODO aria for syncing icon
-
   const syncing = useExtern(NumSyncing)
+  return <div
+    className="dirty"
+    title={syncing ? syncing + " dirty" : "all synced!"}
+    aria-label="Dirty"
+    aria-checked={syncing > 0}
+  />
+}
+
+function Navbar() {
+
 
   return <nav className="navbar">
     <div className="left">
@@ -35,12 +44,7 @@ function Navbar() {
       <IbisSearch />
     </div>
     <div className="right">
-      <div
-        className="dirty"
-        title={syncing ? syncing + " dirty" : "all synced!"}
-        aria-label="Dirty"
-        aria-checked={syncing > 0}
-      />
+      <SyncIndicator />
     </div>
   </nav>
 }
