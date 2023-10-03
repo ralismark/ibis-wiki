@@ -21,8 +21,12 @@ export function IbisSearch() {
     }}
   >{content}</li>
 
-  const listing = useExternOr(facade?.listing, new Set());
   const listingSugs: Suggestion[] = useMemo(() => {
+    // we don't use useExtern here since we don't wanna recalculate search
+    // suggestions whenever the listing changes
+    const listing = facade?.listing.getSnapshot();
+    if (!listing) return []
+
     const parts = query.toLowerCase().split(/\s+/).filter(x => x !== "")
     if (parts.length === 0) return []
     return Array.from(listing)
@@ -32,7 +36,7 @@ export function IbisSearch() {
           <>{path}</>,
           () => controller.open(path),
         ])
-  }, [query, listing])
+  }, [query])
 
   const [searchSugs, setSearchSugs] = useState<Suggestion[]>([])
   useEffect(() => {
