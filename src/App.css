@@ -1,18 +1,3 @@
-/* css reset */
-
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-:root {
-  --content-width: min(calc(100vw - 1rem), 600px);
-}
-
-html, body, div {
-  margin: 0;
-  padding: 0;
-}
-
 body {
   padding-top: 4rem;
   padding-bottom: 100vh;
@@ -23,87 +8,10 @@ pre {
   margin-bottom: 0;
 }
 
-/* colouring ------------------------------------------------------------------ */
-
-:root {
-  /* from ralismark.xyz */
-  --accent: 219, 85, 153;
-  --secondary: #9C56DB;
-  --tertiary: #6480ED;
-  --stroke: rgba(127, 127, 127, 0.3);
-
-  --body-bg: #191a1a;
-  --body-fg: #e7e6e5;
-}
-@media (prefers-color-scheme: light) {
-  :root {
-    --body-fg: #111;
-    --body-bg: white;
-  }
-}
-@media print {
-  :root {
-    --body-fg: #111;
-    --body-bg: white;
-  }
-}
-
-html {
-  color: var(--body-fg);
-  background-color: var(--body-bg);
-  font: 300 1em/1.9 Merriweather,"Iowan Old Style","Palatino Linotype","URW Palladio L",P052,serif;
-}
-
-a:not([role=button]) {
-  color: var(--tertiary);
-}
-
-/* defaults ------------------------------------------------------------------- */
-
-/* card */
-details,
-select,
-textarea, input:not([type=submit]),
-button, a[role=button]
-{
-  color: inherit;
-  font: inherit;
-  border: 1px solid var(--stroke);
-  padding: 0.5em;
-  border-radius: 0.2em;
-
-  padding: 0.2em 0.5em;
-  margin: 0.2em 0;
-  font-size: 0.9em;
-}
-
-/* typy things */
-textarea, select, input:not([type=submit]) {
-  background: rgba(var(--accent), 0.1);
-}
-
-/* clicky things */
-input[type=submit], button, a[role=button] {
-  background: rgba(var(--accent), 0.2);
-  cursor: pointer;
-}
-
 fieldset {
   border: 1px solid var(--stroke);
   border-radius: 0.2em;
 }
-
-details {
-  background: rgba(var(--accent), 0.05);
-
-  summary {
-    cursor: pointer;
-    font-size: 0.9em;
-    margin: .5em;
-  }
-}
-
-/* everything else */
 
 main {
   display: grid;

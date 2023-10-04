@@ -26,6 +26,7 @@ const extensions: Extension = [
   EditorView.theme({
     "& .cm-content": {
       fontFamily: "sans-serif",
+      textAlign: "initial",
     },
     "&.cm-focused": {
       outline: "none",
