@@ -44,7 +44,7 @@ export function IbisCalendar(props: {
     >
       <span>&lt;</span>
     </div>
-    <table>
+    <table role="grid">
       <tbody>
         {[0, 1, 2, 3, 4, 5, 6].map(offset => {
           const rowStart = new Date(alignedStart);
