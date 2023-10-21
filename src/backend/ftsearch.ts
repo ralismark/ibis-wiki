@@ -3,11 +3,14 @@ import { IDB_FTSEARCH } from "../globals";
 import { assertUnreachable, batched } from "../util";
 import { Snapshot } from "./store/bridge";
 import { tokenise, outlinks } from "./tokenise"
+import { ExternState } from "../extern";
 
 // based on <https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295>
 
 // Version of summaries. Bump this every time the scheme changes, to force refresh.
 const VERSION = 2
+
+export const NumReindexing = new ExternState<number>(0)
 
 type FtsRow = {
   path: string
@@ -81,79 +84,97 @@ export class FullTextSearch {
   }
 
   async handleSummaryChanged(ev: SummaryChanged) {
-    if (ev.type === "single") {
-      const tok = (await tokenise)
+    // TODO It seems like fts sometimes gets stuck in a high cpu utilisation
+    // state when the page is idle, burning CPU handling ev.type == "all"
+    // updates.
 
-      await this.tr("fts", "readwrite", async tr => {
-        const fts = tr.objectStore("fts")
-        const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
-        if (etag !== ev.etag) {
-          if (ev.etag !== null) {
-            const row: FtsRow = {
-              path: ev.path,
-              etag: ev.etag,
-              terms: tok(ev.content),
-              refs: outlinks(ev.content),
-            }
-            fts.put(row)
-          } else {
-            fts.delete(ev.path)
-          }
-        }
-      })
-    } else if (ev.type === "all") {
-      const remListing = new Map(ev.listing);
+    let isReindex = false
+    const markAsReindex = () => {
+      isReindex = true
+      NumReindexing.set(NumReindexing.getSnapshot() + 1)
+    }
 
-      // figure out which rows we need to fetch
-      await this.tr("fts", "readwrite", async tr => {
-        const fts = tr.objectStore("fts")
-        let r = fts.openCursor()
-        let cursor
-        while ((cursor = await this.r(r)) !== null) {
-          const row = cursor.value as FtsRow
-          const listing = remListing.get(row.path)
+    try {
+      if (ev.type === "single") {
+        const tok = (await tokenise)
 
-          if (listing?.etag === null) {
-            console.log("[FTS]", "remove row:", row)
-            cursor.delete()
-          } else if (listing?.etag === row.etag) {
-            remListing.delete(row.path)
-          }
-
-          cursor.continue()
-        }
-      })
-
-      // fetch those rows
-      const rowsp = Array.from(remListing.keys()).map(async path => {
-        const snap = await this.fetcher(path)
-        if (snap.content === null) {
-          console.warn("fetched empty file for non-empty etag")
-          return null
-        }
-
-        const row: FtsRow = {
-          path,
-          etag: snap.etag!,
-          terms: (await tokenise)(snap.content),
-          refs: outlinks(snap.content),
-        }
-        console.log("[FTS]", "insert row:", row)
-        return row
-      })
-
-      // insert those rows
-      await batched(
-        rowsp,
-        rows => this.tr("fts", "readwrite", tr => {
+        await this.tr("fts", "readwrite", async tr => {
           const fts = tr.objectStore("fts")
-          for (const row of rows) fts.put(row)
-        }),
-        err => {
-          console.log(err)
-        }
-      )
-    } else assertUnreachable(ev)
+          const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
+          if (etag !== ev.etag) {
+            markAsReindex()
+
+            if (ev.etag !== null) {
+              const row: FtsRow = {
+                path: ev.path,
+                etag: ev.etag,
+                terms: tok(ev.content),
+                refs: outlinks(ev.content),
+              }
+              fts.put(row)
+            } else {
+              fts.delete(ev.path)
+            }
+          }
+        })
+      } else if (ev.type === "all") {
+        const remListing = new Map(ev.listing);
+
+        // figure out which rows we need to fetch
+        await this.tr("fts", "readwrite", async tr => {
+          const fts = tr.objectStore("fts")
+          let r = fts.openCursor()
+          let cursor
+          while ((cursor = await this.r(r)) !== null) {
+            const row = cursor.value as FtsRow
+            const listing = remListing.get(row.path)
+
+            if (listing?.etag === null) {
+              console.log("[FTS]", "remove row:", row)
+              cursor.delete()
+            } else if (listing?.etag === row.etag) {
+              remListing.delete(row.path)
+            }
+
+            cursor.continue()
+          }
+        })
+
+        if (remListing.size > 0) markAsReindex()
+
+        // fetch those rows
+        const rowsp = Array.from(remListing.keys()).map(async path => {
+          const snap = await this.fetcher(path)
+          if (snap.content === null) {
+            console.warn("fetched empty file for non-empty etag")
+            return null
+          }
+
+          const row: FtsRow = {
+            path,
+            etag: snap.etag!,
+            terms: (await tokenise)(snap.content),
+            refs: outlinks(snap.content),
+          }
+          console.log("[FTS]", "insert row:", row)
+          return row
+        })
+
+        // insert those rows
+        await batched(
+          rowsp,
+          rows => this.tr("fts", "readwrite", tr => {
+            const fts = tr.objectStore("fts")
+            for (const row of rows) fts.put(row)
+          }),
+          err => {
+            console.log(err)
+          }
+        )
+      } else assertUnreachable(ev)
+    } finally {
+      if (isReindex) NumReindexing.set(NumReindexing.getSnapshot() - 1)
+    }
   }
 
   search(query: string): Promise<string[]> {
