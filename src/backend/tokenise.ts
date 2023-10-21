@@ -1,14 +1,16 @@
-import winkNLP from "wink-nlp"
-import model from "wink-eng-lite-web-model"
+export const tokenise = (async () => {
+  const winkNLP = (await import("wink-nlp")).default
+  const model = (await import("wink-eng-lite-web-model")).default
 
-const nlp = winkNLP(model, [])
+  const nlp = winkNLP(model, [])
 
-export function tokenise(text: string): string[] {
-  return nlp.readDoc(text)
-    .tokens()
-    .filter(t => t.out(nlp.its.type) === "word" && !t.out(nlp.its.stopWordFlag))
-    .out(nlp.its.stem, nlp.as.unique)
-}
+  return (text: string): string[] => {
+    return nlp.readDoc(text)
+      .tokens()
+      .filter(t => t.out(nlp.its.type) === "word" && !t.out(nlp.its.stopWordFlag))
+      .out(nlp.its.stem, nlp.as.unique)
+  }
+})()
 
 const refPattern = /\[\[([^\r\n\[\]]+)\]\]/g
 export function outlinks(text: string): string[] {
