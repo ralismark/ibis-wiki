@@ -19,5 +19,6 @@ export default defineConfig({
         static: resolve(__dirname, "static/index.html"),
       },
     },
+    sourcemap: true,
   },
 });

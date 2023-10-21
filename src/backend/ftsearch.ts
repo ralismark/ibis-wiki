@@ -82,6 +82,8 @@ export class FullTextSearch {
 
   async handleSummaryChanged(ev: SummaryChanged) {
     if (ev.type === "single") {
+      const tok = (await tokenise)
+
       await this.tr("fts", "readwrite", async tr => {
         const fts = tr.objectStore("fts")
         const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
@@ -90,7 +92,7 @@ export class FullTextSearch {
             const row: FtsRow = {
               path: ev.path,
               etag: ev.etag,
-              terms: tokenise(ev.content),
+              terms: tok(ev.content),
               refs: outlinks(ev.content),
             }
             fts.put(row)
@@ -133,7 +135,7 @@ export class FullTextSearch {
         const row: FtsRow = {
           path,
           etag: snap.etag!,
-          terms: tokenise(snap.content),
+          terms: (await tokenise)(snap.content),
           refs: outlinks(snap.content),
         }
         console.log("[FTS]", "insert row:", row)
@@ -155,11 +157,16 @@ export class FullTextSearch {
   }
 
   search(query: string): Promise<string[]> {
-    const terms = tokenise(query)
-    const out: string[] = []
-    if (terms.length === 0) return Promise.resolve(out)
-
+    // intentionally using a promise here instead of plain async, to get a
+    // resolve function instead of having to return
     return new Promise(async resolve => {
+      const terms = (await tokenise)(query)
+      const out: string[] = []
+      if (terms.length === 0) {
+        resolve(out)
+        return
+      }
+
       await this.tr("fts", "readonly", tr => {
         const index = tr.objectStore("fts").index("terms")
         let outstanding = 0
