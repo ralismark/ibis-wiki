@@ -9,6 +9,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css"
 import { NumSyncing } from "./backend/file";
+import { NumReindexing } from "./backend/ftsearch";
 
 export type IbisController = {
   // ui bits
@@ -34,9 +35,13 @@ function SyncIndicator() {
   />
 }
 
+function ReindexIndicator() {
+  const reindexing = useExtern(NumReindexing) > 0
+  return reindexing && <span
+  >Indexing</span>
+}
+
 function Navbar() {
-
-
   return <nav className="navbar">
     <div className="left">
     </div>
@@ -44,6 +49,7 @@ function Navbar() {
       <IbisSearch />
     </div>
     <div className="right">
+      <ReindexIndicator />
       <SyncIndicator />
     </div>
   </nav>
