@@ -48,10 +48,12 @@ main > * {
 }
 
 .navbar {
+  --navbar-height: 2rem;
+
   position: fixed;
   top: 0;
   width: 100%;
-  line-height: 2rem;
+  line-height: var(--navbar-height);
 
   z-index: 100;
 
