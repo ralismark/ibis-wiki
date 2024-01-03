@@ -3,15 +3,19 @@ import { EditorView } from "@codemirror/view";
 import { MutableRefObject } from "react";
 import { Feed } from "../extern";
 
+/*
+ * EditorStateRef wraps a CodeMirror EditorState to allow it to be "shared",
+ * rather than being owned by a particular editor view.
+ */
 export class EditorStateRef {
   private state: EditorState
-  private feed: Feed<[Transaction | EditorState]> = new Feed();
+  private feed: Feed<[Transaction /*| EditorState*/]> = new Feed();
 
   constructor(state: EditorState) {
     this.state = state;
   }
 
-  subscribe(f: (tr: Transaction | EditorState) => void): () => void {
+  subscribe(f: (tr: Transaction /*| EditorState*/) => void): () => void {
     return this.feed.subscribe(f);
   }
 
@@ -21,10 +25,10 @@ export class EditorStateRef {
     return this.state;
   }
 
-  setState(state: EditorState) {
+  /*setState(state: EditorState) {
     this.state = state;
     this.feed.signal(state);
-  }
+    }*/
 
   update(tr: Transaction): void
   update(...specs: TransactionSpec[]): void
@@ -44,9 +48,9 @@ export class EditorStateRef {
         dispatch: tr => this.update(tr),
       });
       const unsub = this.subscribe(tr => {
-        if (tr instanceof EditorState) {
+        /*if (tr instanceof EditorState) {
           view.setState(tr)
-        } else {
+        } else*/ {
           view.update([tr]);
         }
       });
