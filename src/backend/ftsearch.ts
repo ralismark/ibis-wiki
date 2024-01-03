@@ -102,8 +102,6 @@ export class FullTextSearch {
           const fts = tr.objectStore("fts")
           const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
           if (etag !== ev.etag) {
-            markAsReindex()
-
             if (ev.etag !== null) {
               const row: FtsRow = {
                 path: ev.path,
@@ -141,6 +139,8 @@ export class FullTextSearch {
         })
 
         if (remListing.size > 0) markAsReindex()
+
+        console.log("[FTS]", "fetching " + remListing.size + " rows")
 
         // fetch those rows
         const rowsp = Array.from(remListing.keys()).map(async path => {

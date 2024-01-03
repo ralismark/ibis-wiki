@@ -10,6 +10,35 @@ import { toast } from "react-toastify";
 
 export const NumSyncing = new ExternState<number>(0)
 
+/*
+ * File is represents a single file.
+ *
+ * # File Version
+ *
+ * Conceptually, there are two or three versions of each file:
+ *
+ * 1. Latest local copy of the file, including any not-yet-synced changes.
+ * 2. The latest (known) version in the store.
+ *
+ * (There's actually also a third -- the version from which our local copy
+ * diverged from the store -- but this cannot be fetched and is rarely used.)
+ *
+ * These two can diverge significantly when:
+ *
+ * - A file continues being edited after the application loses internet (and
+ *   cannot sync).
+ * - A file is edited on another instance of this application while this
+ *   instance isn't open.
+ *
+ * # Notes
+ *
+ * Currently, we don't correctly handle file state when there are multiple
+ * instances open on different tabs in the same browser.
+ *
+ * When doing things with file state, it's very useful to know which version
+ * you're thinking about. For example, full text search operates using the
+ * _store_ version, disregarding local changes that haven't been synced.
+ */
 export class File {
   readonly path: string
   readonly store: Store
@@ -25,6 +54,8 @@ export class File {
 
   // Latest version of remote we know about
   private remoteETag: ETag
+
+  // --------------------------------------------------------------------------
 
   // Whether we're in a conflicted state or not
   readonly isConflicting = new ExternMemo(() => this.remoteETag != this.baseETag);
