@@ -121,21 +121,28 @@ export class FullTextSearch {
         // figure out which rows we need to fetch
         await this.tr("fts", "readwrite", async tr => {
           const fts = tr.objectStore("fts")
-          let r = fts.openCursor()
-          let cursor
-          while ((cursor = await this.r(r)) !== null) {
-            const row = cursor.value as FtsRow
-            const listing = remListing.get(row.path)
 
-            if (listing?.etag === null) {
-              console.log("[FTS]", "remove row:", row)
-              cursor.delete()
-            } else if (listing?.etag === row.etag) {
-              remListing.delete(row.path)
+          await new Promise(resolve => {
+            const r = fts.openCursor()
+            r.onsuccess = () => {
+              const cursor = r.result
+              if (cursor) {
+                const row = cursor.value as FtsRow
+                const listing = remListing.get(row.path)
+
+                if (listing === undefined || listing.etag === null) {
+                  console.log("[FTS]", "remove row:", row)
+                  cursor.delete()
+                } else if (listing.etag === row.etag) {
+                  remListing.delete(row.path)
+                }
+
+                cursor.continue()
+              } else {
+                resolve(undefined)
+              }
             }
-
-            cursor.continue()
-          }
+          })
         })
 
         if (remListing.size > 0) markAsReindex()
