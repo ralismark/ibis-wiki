@@ -30,14 +30,15 @@ export class EditorStateRef {
     this.feed.signal(state);
     }*/
 
-  update(tr: Transaction): void
-  update(...specs: TransactionSpec[]): void
-  update(...input: TransactionSpec[] | [Transaction]): void {
+  update(tr: Transaction): Transaction
+  update(...specs: TransactionSpec[]): Transaction
+  update(...input: TransactionSpec[] | [Transaction]): Transaction {
     const tr = input.length === 1 && input[0] instanceof Transaction ? input[0]
       : this.state.update(...input as TransactionSpec[]);
 
     this.state = tr.state;
     this.feed.signal(tr);
+    return tr
   }
 
   attach(ref: MutableRefObject<HTMLElement | null>): () => void {

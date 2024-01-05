@@ -6,4 +6,5 @@ export const LsConfig: LocalStorageEntry = LsIbis.scoped("config");
 export const LsStore = LsIbis.scoped("store/");
 
 export const DEBOUNCE_MS = 2000;
+export const STATE_REPLY_TIMEOUT_MS = 100;
 export const IDB_FTSEARCH = "ibis/fts";

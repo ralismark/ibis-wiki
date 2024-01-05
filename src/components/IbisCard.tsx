@@ -8,12 +8,18 @@ export function IbisCard({ path, onRemove }: { path: string, onRemove: () => voi
   const controller = useExtern(IbisController)
   const facade = useExtern(FacadeExtern)
   const [file, setFile] = useState<File | null>(null);
+  const ref = useRef(null);
 
   useEffect(() => {
-    facade?.files.open(path).then(f => setFile(f));
+    const close = facade?.openFile(path).then(f => {
+      setFile(f)
+      return () => f.abort.abort()
+    });
+    return () => {
+      close?.then(fn => fn())
+    }
   }, [facade]);
 
-  const ref = useRef(null);
   const conflicting = useExternOr(file?.isConflicting, false);
 
   useEffect(() => {
