@@ -4,8 +4,10 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { bracketMatching, defaultHighlightStyle, indentService, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import markdown from "./markdown";
 import { Extension } from "@codemirror/state";
+import { mergingDoc } from "./merge";
 
 const extensions: Extension = [
+  mergingDoc,
   markdown,
   highlightSpecialChars(),
   history(),

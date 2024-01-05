@@ -8,7 +8,7 @@ import { LsWal } from "./globals";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css"
-import { NumSyncing } from "./backend/file";
+import { NumDirty, NumSyncing } from "./backend/file";
 import { NumReindexing } from "./backend/ftsearch";
 
 export type IbisController = {
@@ -26,12 +26,15 @@ export const IbisController = new ExternState<IbisController>(DummyIbisControlle
 
 function SyncIndicator() {
   // TODO aria for syncing icon
+  const dirty = useExtern(NumDirty)
   const syncing = useExtern(NumSyncing)
   return <div
     className="dirty"
-    title={syncing ? syncing + " dirty" : "all synced!"}
+    data-dirty={dirty}
+    data-syncing={syncing}
+    title={`${dirty} dirty ${syncing} syncing`}
     aria-label="Dirty"
-    aria-checked={syncing > 0}
+    aria-checked={dirty > 0}
   />
 }
 

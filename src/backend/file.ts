@@ -1,16 +1,47 @@
-import { EditorState, Text } from "@codemirror/state";
-import { sleep } from "../util";
-import { Store, ETag, ETagMismatchError } from "./store";
-import { DEBOUNCE_MS, LsWal } from "../globals";
-import extensions from "../codemirror/extensions";
-import { ExternMemo, ExternState } from "../extern";
-import { EditorStateRef } from "../codemirror/Controlled";
-import { setMerging } from "../codemirror/merge";
-import { toast } from "react-toastify";
+import { EditorState, Text, Transaction } from "@codemirror/state"
+import { assertUnreachable, sleep } from "../util"
+import { Store, ETag, ETagMismatchError } from "./store"
+import { DEBOUNCE_MS, LsWal, STATE_REPLY_TIMEOUT_MS } from "../globals"
+import extensions from "../codemirror/extensions"
+import { ExternMemo, ExternState } from "../extern"
+import { EditorStateRef } from "../codemirror/Controlled"
+import { setMerging } from "../codemirror/merge"
+import { stateFromJSON, stateToJSON, trFromJSON, trToJSON } from "../codemirror/share"
+import { toast } from "react-toastify"
 
+export const NumDirty = new ExternState<number>(0)
 export const NumSyncing = new ExternState<number>(0)
 
-/*
+// Representation of a file in local storage
+type StashedRepr = {
+  content: string,
+  etag: ETag, // TODO rename this to baseETag
+}
+
+// For debugging, so it's easier to track instances
+let counter = 0
+
+type MsgRequestState = {
+  type: "requestState",
+}
+type MsgState = {
+  type: "state",
+  state: unknown, // from stateToJSON
+  lastSaved: string[], // from Text.toJSON
+  baseETag: ETag,
+  remoteETag: ETag,
+}
+type MsgUpdate = {
+  type: "update",
+  tr?: unknown,
+  lastSaved?: string[],
+  baseETag?: ETag,
+  remoteETag?: ETag,
+}
+
+type Msg = MsgRequestState | MsgState | MsgUpdate
+
+/**
  * File is represents a single file.
  *
  * # File Version
@@ -40,9 +71,14 @@ export const NumSyncing = new ExternState<number>(0)
  * _store_ version, disregarding local changes that haven't been synced.
  */
 export class File {
+  readonly id: number = counter++
+
   readonly path: string
   readonly store: Store
 
+  readonly bc: BroadcastChannel
+
+  // Editor state i.e. the contents of the file.
   readonly esr: EditorStateRef
 
   // Remote version we're derived from. Used to ensure we don't overwrite
@@ -52,146 +88,299 @@ export class File {
   // aware of -- that's remoteETag.
   private baseETag: ETag
 
-  // Latest version of remote we know about
+  // Latest version of remote we know about. The same as baseETag, except during
+  // a conflict, in which case remoteETag is the version we're comparing
+  // against.
+  //
+  // We need to store this in order to set baseETag when we finish resolving a
+  // conflict.
   private remoteETag: ETag
+
+  // Last document that was saved. This is used to determine whether there are
+  // unsaved edits.
+  private lastSaved: Text
 
   // --------------------------------------------------------------------------
 
   // Whether we're in a conflicted state or not
-  readonly isConflicting = new ExternMemo(() => this.remoteETag != this.baseETag);
+  readonly isConflicting = new ExternMemo(() => this.remoteETag != this.baseETag)
+
+  readonly abort: AbortController = new AbortController()
 
   private constructor(
     path: string,
     store: Store,
+    bc: BroadcastChannel,
     state: EditorState,
     baseETag: ETag,
     remoteETag: ETag,
+    lastSaved: Text
   ) {
     this.path = path
     this.store = store
+    this.bc = bc
     this.esr = new EditorStateRef(state)
     this.baseETag = baseETag
     this.remoteETag = remoteETag
+    this.lastSaved = lastSaved
 
-    this.esr.subscribe(tr => {
-      if (tr instanceof EditorState || tr.docChanged) this.dirty()
-    });
+    this.bc.onmessage = ev => {
+      const msg: Msg = ev.data
+      console.log("[file]", this.path, this.id, "recv", msg)
+      if (msg.type === "requestState") {
+        const reply: MsgState = {
+          type: "state",
+          state: stateToJSON(this.esr.getState()),
+          lastSaved: this.lastSaved.toJSON(),
+          baseETag: this.baseETag,
+          remoteETag: this.remoteETag,
+        }
+        console.log("[file]", this.path, this.id, "send", reply)
+        bc.postMessage(reply)
+      } else if (msg.type === "state") {
+        // do nothing
+        // TODO verify that our state matches the one we saw?
+      } else if (msg.type === "update") {
+        if (msg.tr !== undefined) {
+          // will dirty via esr subscription
+          this.esr.update(trFromJSON(msg.tr as any, this.esr.getState()))
+        }
+        if (msg.lastSaved !== undefined) {
+          this.lastSaved = Text.of(msg.lastSaved)
+        }
+        if (msg.baseETag !== undefined) {
+          this.baseETag = msg.baseETag
+          this.isConflicting.signal() // TODO we might be triggering this more than needed
+        }
+        if (msg.remoteETag !== undefined) {
+          this.remoteETag = msg.remoteETag
+          this.isConflicting.signal() // TODO we might be triggering this more than needed
+        }
+      } else assertUnreachable(msg)
+    }
+
+    const unsub = this.esr.subscribe(tr => {
+      console.log("[file]", this.path, this.id, "tr", tr)
+      if (!tr.annotation(Transaction.remote)) {
+        const msg: MsgUpdate = {
+          type: "update",
+          tr: trToJSON(tr),
+        }
+        console.log("[file]", path, "send", msg)
+        this.bc.postMessage(msg)
+      }
+
+      if (/*tr instanceof EditorState ||*/ tr.docChanged) {
+        this.dirty()
+      }
+    })
+
+    if (!this.lastSaved.eq(this.doc())) {
+      this.dirty()
+    }
+
+    const close = () => {
+      bc.close()
+      unsub()
+      console.log("[file]", this.path, this.id, "close")
+    }
+    if (this.abort.signal.aborted) close()
+    else this.abort.signal.addEventListener("abort", close)
+
+    console.log("[file]", this.path, this.id, "construct", this)
   }
 
+  /**
+   * new wraps the constructor, handling the logic for loading the file from
+   * another instance, or localstorage/store.
+   */
   static async new(store: Store, path: string): Promise<File> {
-    const { content: remoteContent, etag: remoteETag } = await store.load(path);
-    const stored = LsWal.getItem(path);
-    if (stored) {
-      const { content: savedContent, etag: savedETag } = JSON.parse(stored);
-      if (savedETag !== remoteETag) {
-        // conflicted
-        return new File(
-          path,
-          store,
-          EditorState.create({
-            doc: savedContent,
-            extensions: [
-              extensions,
-              setMerging(remoteContent),
-            ],
-          }),
-          savedETag,
-          remoteETag,
-        );
-      } else {
-        const f = new File(
-          path,
-          store,
-          EditorState.create({
-            doc: savedContent,
-            extensions: [
-              extensions,
-              setMerging(null),
-            ],
-          }),
-          savedETag,
-          remoteETag,
-        );
-        f.dirty();
-        return f;
+    console.log("[file]", path, "new")
+    const bc = new BroadcastChannel(`ibis/file/${path}`)
+
+    type Ret = { state: EditorState, lastSaved: Text, baseETag: ETag, remoteETag: ETag }
+    const { state, lastSaved, baseETag, remoteETag } = await new Promise<Ret>(async resolve => {
+      const done = new AbortController()
+
+      // try getting the state from another instance
+      bc.onmessage = ev => {
+        const msg: Msg = ev.data
+        console.log("[file]", path, "recv", msg)
+        if (msg.type === "state") {
+          done.abort()
+          bc.onmessage = null
+          resolve({
+            state: stateFromJSON(msg.state),
+            lastSaved: Text.of(msg.lastSaved),
+            baseETag: msg.baseETag,
+            remoteETag: msg.remoteETag,
+          })
+        }
       }
-    } else {
-      return new File(
-        path,
-        store,
-        EditorState.create({
-          doc: remoteContent,
-          extensions: [
-            extensions,
-            setMerging(null),
-          ],
-        }),
-        remoteETag,
-        remoteETag,
-      )
-    }
+      const msg: MsgRequestState = { type: "requestState" }
+      console.log("[file]", path, "send", msg)
+      bc.postMessage(msg)
+
+      await sleep(STATE_REPLY_TIMEOUT_MS)
+
+      // otherwise, load from localstorage & remote
+      try {
+
+        await navigator.locks.request(`ibis/file/${path}/fetch`, {
+          signal: done.signal
+        }, async () => {
+          // NOTE There may be a race condition between:
+          //
+          // 1. Another tab fetches and broadcasts state, which we receive
+          // 2. Us acquiring this lock and trying to fetch
+          //
+          // This can be fixed by either waiting STATE_REPLY_TIMEOUT_MS again,
+          // or by giving the abort signal to store.load
+
+          const { content: remoteContent, etag: remoteETag } = await store.load(path)
+          if (done.signal.aborted) return // more or less fix the above issue
+          const stashed: StashedRepr | null = JSON.parse(LsWal.getItem(path) ?? "null")
+
+          const conflict = stashed !== null && stashed.etag !== remoteETag
+          const remoteText = Text.of(remoteContent.split(/\r?\n/))
+
+          const out = {
+            state: EditorState.create({
+              doc: stashed?.content ?? remoteContent,
+              extensions,
+            }).update({
+              // We can't just do mergingDoc.of, see codemirror/merge.ts for
+              // why (it's a big HACK).
+              effects: setMerging.of(conflict ? remoteText : null),
+            }).state,
+            lastSaved: remoteText,
+            baseETag: stashed ? stashed.etag : remoteETag,
+            remoteETag: remoteETag,
+          }
+          // If file was opened in another tab at the same time, they'll also be
+          // trying to acquire this lock & fetch the file. Send them the state
+          // to abort that.
+          const msg: MsgState = {
+            type: "state",
+            state: stateToJSON(out.state),
+            lastSaved: out.lastSaved.toJSON(),
+            baseETag: out.baseETag,
+            remoteETag: out.remoteETag,
+          }
+          console.log("[file]", path, "send", msg)
+          bc.postMessage(msg)
+
+          bc.onmessage = null
+          resolve(out)
+        })
+
+      } catch(e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          // catch abort
+        } else {
+          throw e
+        }
+      }
+    })
+
+    return new this(
+      path,
+      store,
+      bc,
+      state,
+      baseETag,
+      remoteETag,
+      lastSaved,
+    )
   }
 
   private runningPut: null | Promise<void> = null
 
-  private dirty() {
-    this.writeLS();
-
-    if (this.runningPut !== null) return; // there is already a task running
-    this.runningPut = (async () => {
-      try {
-        await this.put();
-      } finally {
-        this.runningPut = null
-      }
-    })();
+  private shouldPut(): boolean {
+    return this.baseETag === this.remoteETag && !this.lastSaved.eq(this.doc())
   }
 
-  // TODO make this less flaky when there's multiple instances open (either
-  // from diff tabs, or like react's strict mode)
+  private dirty() {
+    this.stash()
 
-  private async put() {
-    while (true) {
-      if (this.baseETag !== this.remoteETag) return; // conflict, don't put
-
-      await sleep(DEBOUNCE_MS);
-
-      // TODO is this one necessary?
-      if (this.baseETag !== this.remoteETag) return; // conflict, don't put
-
-      const content = this.doc(); // the text that we're gonna put
+    if (this.runningPut !== null) return // there is already a task running
+    this.runningPut = (async () => {
+      NumDirty.set(NumDirty.getSnapshot() + 1)
       try {
-        const { etag } = await this.store.write(this.path, content.toString(), this.baseETag);
+        while (this.shouldPut()) {
+          // TODO abort lock if we receive a broadcast that the file got synced
+          await navigator.locks.request(`ibis/file/${this.path}/put`, {
+            signal: this.abort.signal,
+          }, async () => {
+            if (!this.shouldPut()) return
 
-        this.baseETag = this.remoteETag = etag;
+            await sleep(DEBOUNCE_MS)
 
-        if (this.doc().eq(content)) {
-          // everything is up to date!
-          this.clearLS();
-          return;
+            const content = this.doc()
+            if (!this.shouldPut()) return // TODO is this needed?
+
+            try {
+              NumSyncing.set(NumSyncing.getSnapshot() + 1)
+              const { etag } = await this.store.write(
+                this.path,
+                content.toString(),
+                this.baseETag,
+              )
+              this.baseETag = this.remoteETag = etag
+            } catch(e) {
+              if (e instanceof ETagMismatchError) {
+                // enter conflicted state
+                const { content, etag } = await this.store.load(this.path)
+                this.remoteETag = etag
+                const tr = this.esr.update({
+                  effects: setMerging.of(Text.of(content.split(/\r?\n/))),
+                  annotations: Transaction.remote.of(true), // suppress so we can do it atomically
+                })
+                this.isConflicting.signal()
+
+                const msg: MsgUpdate = {
+                  type: "update",
+                  tr: trToJSON(tr),
+                  remoteETag: etag,
+                }
+                console.log("[file]", this.path, this.id, "send", msg)
+                this.bc.postMessage(msg)
+
+                toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
+                console.log("[file]", this.path, this.id, "conflict", this.remoteETag, this.baseETag)
+              } else {
+                toast.error(`Couldn't save "${this.path}": ${e}`)
+              }
+
+              return
+            } finally {
+              NumSyncing.set(NumSyncing.getSnapshot() - 1)
+            }
+
+            this.lastSaved = content
+            this.stash() // update etag
+            const msg: MsgUpdate = {
+              type: "update",
+              lastSaved: content.toJSON(),
+              baseETag: this.baseETag,
+              remoteETag: this.remoteETag,
+            }
+            console.log("[file]", this.path, this.id, "send", msg)
+            this.bc.postMessage(msg)
+          })
         }
+        if (this.baseETag === this.remoteETag) this.clearStash()
       } catch(e) {
-        if (e instanceof ETagMismatchError) {
-          // enter conflicted state
-          const { content, etag } = await this.store.load(this.path);
-          this.remoteETag = etag;
-          this.isConflicting.signal();
-          this.esr.update({
-            effects: [setMerging(content).effect],
-          });
-
-          toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
+        if (e instanceof DOMException && e.name === "AbortError") {
+          // catch abort
         } else {
-          toast.error(`Couldn't save "${this.path}": ${e}`)
+          throw e
         }
-
-        return;
+      } finally {
+        NumDirty.set(NumDirty.getSnapshot() - 1)
+        this.runningPut = null
       }
-
-      this.writeLS(); // update etag
-
-      // there's still differences, need to go around again
-    }
+    })()
   }
 
   // End a conflict by committing the local version to remote
@@ -202,28 +391,38 @@ export class File {
     }
 
     this.baseETag = this.remoteETag
-    this.isConflicting.signal()
-    this.esr.update({
-      effects: [setMerging(null).effect],
+    const tr = this.esr.update({
+      effects: setMerging.of(null),
+      annotations: Transaction.remote.of(true), // suppress so we can do it atomically
     })
+    this.isConflicting.signal()
     this.dirty()
+
+    const msg: MsgUpdate = {
+      type: "update",
+      tr: trToJSON(tr),
+      baseETag: this.baseETag,
+    }
+    console.log("[file]", this.path, this.id, "send", msg)
+    this.bc.postMessage(msg)
   }
 
   // helper functions
   private doc(): Text {
-    return this.esr.getState().doc;
+    return this.esr.getState().doc
   }
 
-  private writeLS() {
-    if (LsWal.getItem(this.path) === null) NumSyncing.set(NumSyncing.getSnapshot() + 1)
-    LsWal.setItem(this.path, JSON.stringify({
+  private stash() {
+    const stashed: StashedRepr = {
       content: this.doc().toString(),
       etag: this.baseETag,
-    }));
+    }
+    console.log("[file]", this.path, this.id, "stash", stashed)
+    LsWal.setItem(this.path, JSON.stringify(stashed))
   }
 
-  private clearLS() {
-    if (LsWal.getItem(this.path) !== null) NumSyncing.set(NumSyncing.getSnapshot() - 1)
-    LsWal.removeItem(this.path);
+  private clearStash() {
+    console.log("[file]", this.path, this.id, "clearStash")
+    LsWal.removeItem(this.path)
   }
 }

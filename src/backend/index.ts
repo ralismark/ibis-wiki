@@ -1,10 +1,10 @@
 import { ExternState } from "../extern";
 import { IStore, InMemoryStore, LocalStorageStore, S3Store, Store, SummaryChanged } from "./store";
 import { assertUnreachable } from "../util";
-import { Files } from "./files";
 import { IbisConfig, StoreType } from "../config";
 import demoData from "../demoData";
 import { FullTextSearch } from "./ftsearch";
+import { File } from "./file"
 
 export { File } from "./file"
 
@@ -23,13 +23,11 @@ export function storeFromConfig(config: IbisConfig): IStore {
 
 export class Facade {
   readonly store: Store
-  readonly files: Files
   readonly listing = new ExternState(new Set<string>())
   readonly fts: FullTextSearch = new FullTextSearch((path: string) => this.store.load(path))
 
   constructor(provider: IStore) {
     this.store = new Store(provider)
-    this.files = new Files(this.store)
 
     // NOTE I don't think we need to handle unsubscribe since everything should
     // get garbage collected
@@ -41,6 +39,10 @@ export class Facade {
 
   static fromConfig(config: IbisConfig) {
     return new Facade(storeFromConfig(config))
+  }
+
+  openFile(path: string): Promise<File> {
+    return File.new(this.store, path)
   }
 
   private summaryChangeForListing(change: SummaryChanged) {
