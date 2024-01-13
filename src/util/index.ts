@@ -15,7 +15,7 @@ export async function batched<T>(
   let activeTask: Promise<void> | null = null
 
   const startProcess = async () => {
-    while (pending) {
+    while (pending.length > 0) {
       const batch = pending
       pending = []
       const p = process(batch)

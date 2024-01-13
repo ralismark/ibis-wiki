@@ -9,6 +9,8 @@ import { setMerging } from "../codemirror/merge"
 import { stateFromJSON, stateToJSON, trFromJSON, trToJSON } from "../codemirror/share"
 import { toast } from "react-toastify"
 
+// TODO when we close a file before it's put, it's not actually put
+
 export const NumDirty = new ExternState<number>(0)
 export const NumSyncing = new ExternState<number>(0)
 
@@ -126,7 +128,7 @@ export class File {
 
     this.bc.onmessage = ev => {
       const msg: Msg = ev.data
-      console.log("[file]", this.path, this.id, "recv", msg)
+      console.debug("[file]", this.path, this.id, "recv", msg)
       if (msg.type === "requestState") {
         const reply: MsgState = {
           type: "state",
@@ -135,7 +137,7 @@ export class File {
           baseETag: this.baseETag,
           remoteETag: this.remoteETag,
         }
-        console.log("[file]", this.path, this.id, "send", reply)
+        console.debug("[file]", this.path, this.id, "send", reply)
         bc.postMessage(reply)
       } else if (msg.type === "state") {
         // do nothing
@@ -160,13 +162,13 @@ export class File {
     }
 
     const unsub = this.esr.subscribe(tr => {
-      console.log("[file]", this.path, this.id, "tr", tr)
+      console.debug("[file]", this.path, this.id, "tr", tr)
       if (!tr.annotation(Transaction.remote)) {
         const msg: MsgUpdate = {
           type: "update",
           tr: trToJSON(tr),
         }
-        console.log("[file]", path, "send", msg)
+        console.debug("[file]", path, this.id, "send", msg)
         this.bc.postMessage(msg)
       }
 
@@ -182,12 +184,12 @@ export class File {
     const close = () => {
       bc.close()
       unsub()
-      console.log("[file]", this.path, this.id, "close")
+      console.debug("[file]", this.path, this.id, "close")
     }
     if (this.abort.signal.aborted) close()
     else this.abort.signal.addEventListener("abort", close)
 
-    console.log("[file]", this.path, this.id, "construct", this)
+    console.debug("[file]", this.path, this.id, "construct", this)
   }
 
   /**
@@ -195,7 +197,7 @@ export class File {
    * another instance, or localstorage/store.
    */
   static async new(store: Store, path: string): Promise<File> {
-    console.log("[file]", path, "new")
+    console.debug("[file]", path, "new")
     const bc = new BroadcastChannel(`ibis/file/${path}`)
 
     type Ret = { state: EditorState, lastSaved: Text, baseETag: ETag, remoteETag: ETag }
@@ -205,7 +207,7 @@ export class File {
       // try getting the state from another instance
       bc.onmessage = ev => {
         const msg: Msg = ev.data
-        console.log("[file]", path, "recv", msg)
+        console.debug("[file]", path, "recv", msg)
         if (msg.type === "state") {
           done.abort()
           bc.onmessage = null
@@ -218,7 +220,7 @@ export class File {
         }
       }
       const msg: MsgRequestState = { type: "requestState" }
-      console.log("[file]", path, "send", msg)
+      console.debug("[file]", path, "send", msg)
       bc.postMessage(msg)
 
       await sleep(STATE_REPLY_TIMEOUT_MS)
@@ -267,7 +269,7 @@ export class File {
             baseETag: out.baseETag,
             remoteETag: out.remoteETag,
           }
-          console.log("[file]", path, "send", msg)
+          console.debug("[file]", path, "send", msg)
           bc.postMessage(msg)
 
           bc.onmessage = null
@@ -343,11 +345,11 @@ export class File {
                   tr: trToJSON(tr),
                   remoteETag: etag,
                 }
-                console.log("[file]", this.path, this.id, "send", msg)
+                console.debug("[file]", this.path, this.id, "send", msg)
                 this.bc.postMessage(msg)
 
                 toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
-                console.log("[file]", this.path, this.id, "conflict", this.remoteETag, this.baseETag)
+                console.debug("[file]", this.path, this.id, "conflict", this.remoteETag, this.baseETag)
               } else {
                 toast.error(`Couldn't save "${this.path}": ${e}`)
               }
@@ -365,7 +367,7 @@ export class File {
               baseETag: this.baseETag,
               remoteETag: this.remoteETag,
             }
-            console.log("[file]", this.path, this.id, "send", msg)
+            console.debug("[file]", this.path, this.id, "send", msg)
             this.bc.postMessage(msg)
           })
         }
@@ -403,7 +405,7 @@ export class File {
       tr: trToJSON(tr),
       baseETag: this.baseETag,
     }
-    console.log("[file]", this.path, this.id, "send", msg)
+    console.debug("[file]", this.path, this.id, "send", msg)
     this.bc.postMessage(msg)
   }
 
@@ -417,12 +419,12 @@ export class File {
       content: this.doc().toString(),
       etag: this.baseETag,
     }
-    console.log("[file]", this.path, this.id, "stash", stashed)
+    console.debug("[file]", this.path, this.id, "stash", stashed)
     LsWal.setItem(this.path, JSON.stringify(stashed))
   }
 
   private clearStash() {
-    console.log("[file]", this.path, this.id, "clearStash")
+    console.debug("[file]", this.path, this.id, "clearStash")
     LsWal.removeItem(this.path)
   }
 }
