@@ -136,7 +136,7 @@ export function IbisSearch() {
         else if (e.code === "ArrowUp") setSelected(getNextPrev()[0])
         else if (e.code === "ArrowDown") setSelected(getNextPrev()[1])
         else if (e.code === "Enter") accept()
-        else console.log(e.code)
+        //else console.log(e.code)
       }}
       autoComplete="off"
       placeholder="Search"
