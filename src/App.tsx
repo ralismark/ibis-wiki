@@ -88,7 +88,6 @@ export function App() {
     const init = [
       "index",
       shortdate(today),
-      `y${dateWeekYear(today) % 100}w${dateWeek(today)}`,
     ];
     const wals = LsWal.keys().filter(f => !init.includes(f));
     return [...init, ...wals]
