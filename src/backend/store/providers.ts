@@ -31,7 +31,7 @@ export class InMemoryStore implements IStore {
   async get(path: string) {
     return this.files[path] ?? {
       content: "",
-      version: null,
+      etag: null,
     }
   }
 

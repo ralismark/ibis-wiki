@@ -19,6 +19,12 @@ type FtsRow = {
   refs: string[]
 }
 
+export interface IFullTextSearch {
+  handleSummaryChanged(ev: SummaryChanged): any,
+  search(query: string): Promise<string[]>,
+  backlinks(path: string): Promise<string[]>,
+}
+
 export class FullTextSearch {
   private readonly db: Promise<IDBDatabase>
   private readonly fetcher: (path: string) => Promise<Snapshot>
@@ -245,5 +251,16 @@ export class FullTextSearch {
       const rows = await this.r(tr.objectStore("fts").index("refs").getAll(path));
       return rows.map((r: FtsRow) => r.path)
     })
+  }
+}
+
+export const DummyFullTextSearch: IFullTextSearch = {
+  handleSummaryChanged(ev: SummaryChanged): any {
+  },
+  async search(query: string): Promise<string[]> {
+    return []
+  },
+  async backlinks(path: string): Promise<string[]> {
+    return []
   }
 }

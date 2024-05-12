@@ -1,98 +1,166 @@
-body {
-  padding-top: 4rem;
-  padding-bottom: 100vh;
-}
+/* Global ------------------------------------------------------------------ */
 
 pre {
   margin-top: 0;
   margin-bottom: 0;
 }
 
-fieldset {
+form label,
+form fieldset {
+  display: block;
+  clear: both;
+}
+
+form label > input,
+form label > select {
+  float: right;
+}
+
+form fieldset[disabled] label,
+form fieldset[disabled] legend
+{
+  color: #808080;
+}
+
+form fieldset {
   border: 1px solid var(--stroke);
   border-radius: 0.2em;
 }
 
-main {
-  display: grid;
-  grid-template-columns: 1fr var(--content-width) 1fr;
-}
+/* Top-level App ----------------------------------------------------------- */
 
-main > * {
-  grid-column: 2;
-}
-
-.ibis-listing > input {
-  width: 100%;
-}
-
-.ibis-cards[data-layout-row] {
-  grid-column: 1 / 4;
-  display: flex;
-  flex-direction: row;
-  overflow-x: scroll;
-  gap: 0.5rem;
-}
-
-.ibis-cards[data-layout-row]::before, .ibis-cards[data-layout-row]::after {
-  content: "";
-  display: block;
-  width: calc((100vw - var(--content-width)) / 2 - 0.5rem);
-  flex-shrink: 0;
-}
-
-.ibis-cards[data-layout-row] .ibis-card {
-  width: var(--content-width);
-  flex-shrink: 0;
-  height: fit-content;
-}
-
-.navbar {
+:root {
   --navbar-height: 2rem;
+}
 
+html, body, main {
+  height: 100vh;
+}
+
+header {
   position: fixed;
   top: 0;
   width: 100%;
-  line-height: var(--navbar-height);
-
+  background-color: #402634;
   z-index: 100;
 
-  background-color: #402634;
+  height: var(--navbar-height);
+  max-height: var(--navbar-height);
 
-  /* center align */
   display: flex;
-  .left, .right {
-    flex-basis: 0;
-    flex-grow: 1;
-  }
-  gap: 1rem;
-  .left { text-align: left; }
-  .mid {
-    width: var(--content-width);
-  }
-  .right { text-align: right; }
+  align-items: stretch;
 
-  search {
-    input {
-      padding: 0 0.5em;
-      margin: 0;
-      line-height: 1.5rem;
+  gap: 1rem;
+  padding: 0 0.5rem;
+
+  > * {
+    display: flex;
+    align-items: center;
+
+    gap: 0.5rem;
+
+    &.left, &.right {
+      flex-basis: 0;
+      flex-grow: 1;
+    }
+
+    &.left {
+      justify-content: flex-start;
+    }
+    &.mid {
+      justify-content: center;
+      width: var(--content-width);
+    }
+    &.right {
+      justify-content: flex-end;
     }
   }
 
+  > * > button {
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* header elements */
+
   .dirty {
-    display: inline-block;
-    margin: 0 0.5rem;
     width: 1rem;
     height: 1rem;
-
     border-radius: 50%;
-    vertical-align: middle;
+
+    align-self: center;
 
     border: 2px solid var(--stroke);
 
     &[aria-checked=true] {
       background: var(--secondary);
+    }
+  }
+}
+
+.Cards {
+  height: 100%;
+  padding-top: var(--navbar-height);
+}
+
+.CardsRow {
+  display: flex;
+  flex-direction: row;
+  overflow-x: scroll;
+  gap: 0.5rem;
+
+  &::before, &::after {
+    content: "";
+    display: block;
+    width: calc((100vw - var(--content-width)) / 2 - 0.5rem);
+
+    flex-shrink: 0;
+  }
+
+  > * {
+    flex-shrink: 0;
+    width: fit-content;
+
+    height: fit-content;
+    max-height: 100%;
+    overflow-y: auto;
+
+    padding-bottom: 50vh;
+  }
+}
+
+.WidgetCard {
+  width: var(--content-width); /* default */
+
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 4px;
+  margin: 0.5rem auto;
+
+  > h1, > h2, > section {
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--stroke);
+    }
+  }
+
+  > h1 {
+    margin: 0;
+    overflow-wrap: anywhere; /* since our titles are single words usually */
+
+    contain: layout; /* stop floats from escaping */
+
+    position: sticky;
+    top: 0;
+    background-color: var(--body-bg);
+    z-index: 10;
+
+    button, [role=button] {
+      margin: 0.2em .2em;
+      line-height: 100%;
+
+      padding: 0.2em;
+
+      float: right;
     }
   }
 }

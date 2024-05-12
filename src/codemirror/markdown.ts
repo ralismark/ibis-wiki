@@ -4,6 +4,7 @@ import { styleTags, tags, Tag } from "@lezer/highlight";
 import { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { IbisController } from "../App";
+import { FileWidget } from "../components/FileWidget"
 
 // new tags
 const tx = {
@@ -50,7 +51,7 @@ const RefLink: md.MarkdownExtension & Extension = {
         if (!(e.target instanceof HTMLElement)) return;
         const classes = e.target.classList;
         if (classes.contains("cm-ibix-reflink")) {
-          IbisController.getSnapshot().open(e.target.innerText.trim());
+          IbisController.getSnapshot().open(new FileWidget(e.target.innerText.trim()))
         } else if(classes.contains("cm-ibix-urllink")) {
           window.open(e.target.innerText.replace(/^\s*<\s*|\s*>\s*$/g, ""), "_blank", "noopener,noreferrer");
         } else {

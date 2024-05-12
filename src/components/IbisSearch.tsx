@@ -1,8 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import "./IbisSearch.css"
-import { FacadeExtern } from "../backend"
+import { Facade, FacadeExtern } from "../backend"
 import { IbisController } from "../App"
 import { useExtern } from "../extern"
+import { FileWidget } from "./FileWidget"
+import { SiteControl } from "./Widget"
 
 type Suggestion = {
   key: string
@@ -31,32 +33,32 @@ function Option({ suggestion, selected, ...props }: {
   >{suggestion.content}</li>
 }
 
-export function IbisSearch() {
-  const controller = useExtern(IbisController)
-  const facade = useExtern(FacadeExtern)
-  const [queryOrig, setQuery] = useState("")
-  const query = queryOrig.trim()
-  const [selected, setSelected] = useState("")
+function getSuggestions(
+  query: string,
+  ctl: SiteControl,
+  facade: Facade,
+): [JSX.Element, Suggestion[]][] {
+  const out: [JSX.Element, Suggestion[]][] = []
 
-  // reset selection when search cleared
-  useEffect(() => {
-    if (query === "") setSelected("")
-  }, [query])
+  // general entries
+  if (query !== "") {
+    out.push([
+      <></>,
+      [
+        {
+          key: "", // empty string to auto-select by default
+          content: <>Open note "{query}"</>,
+          fn: () => ctl.open(new FileWidget(query)),
+        }
+      ],
+    ])
+  }
 
-  // Suggestions --------------------------------------------------------------
-
-  const topSugs: Suggestion[] = [
-    {
-      key: "",
-      content: <>Open card "{query}"</>,
-      fn: () => controller.open(query),
-    }
-  ]
-
+  // filename matches
   const listingSugs: Suggestion[] = useMemo(() => {
-    // we don't use useExtern here since we don't wanna recalculate search
-    // suggestions whenever the listing changes
-    const listing = facade?.listing.getSnapshot();
+    // impure, since we don't want to recalculate the search suggestions
+    // whenever the listings change
+    const listing = facade.listing.getSnapshot()
     if (!listing) return []
 
     const parts = query.toLowerCase().split(/\s+/).filter(x => x !== "")
@@ -66,26 +68,49 @@ export function IbisSearch() {
         .map(path => ({
           key: "card-title/" + path,
           content: <>{path}</>,
-          fn: () => controller.open(path),
+          fn: () => ctl.open(new FileWidget(path)),
         }))
-  }, [query])
+  }, [ctl, facade, query])
+  out.push([
+    <p className="search-section">Title matches:</p>,
+    listingSugs,
+  ])
 
-  const [searchSugs, setSearchSugs] = useState<Suggestion[]>([])
+  // full-text search
+  const [searchSugs, setSearchSugs] = useState<Suggestion[]>([]) // since it's async
   useEffect(() => {
-    facade?.fts.search(query).then(results => {
+    facade.fts.search(query).then(results => {
       setSearchSugs(results.map(path => ({
         key: "search/" + path,
         content: <>{path}</>,
-        fn: () => controller.open(path),
+        fn: () => ctl.open(new FileWidget(path)),
       })))
     })
-  }, [facade, query])
+  }, [ctl, facade, query])
 
-  // Functions ----------------------------------------------------------------
+  out.push([
+    <p className="search-section">Content matches:</p>,
+    searchSugs,
+  ])
+
+  return out
+}
+
+export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
+  const { ctl, facade } = props
+  const [queryOrig, setQuery] = useState("")
+  const query = queryOrig.trim()
+  const [selected, setSelected] = useState("")
+
+  // reset selection when search cleared
+  useEffect(() => {
+    if (query === "") setSelected("")
+  }, [query])
+
+  const contents = getSuggestions(query, ctl, facade)
+  const allSugs = contents.flatMap(([title, sugs]) => sugs)
 
   const getNextPrev = (): [string, string] => {
-    // TODO this could probably be optimised
-    const allSugs = [...topSugs, ...listingSugs, ...searchSugs]
     const idx = allSugs.findIndex(({key}) => key === selected)
     if (idx === -1) return ["", ""]
     return [
@@ -94,14 +119,11 @@ export function IbisSearch() {
     ]
   }
 
-  const accept = () => {
-    for (const sugs of [topSugs, listingSugs, searchSugs]) {
-      const match = sugs.find(({key}) => key === selected)
-      if (match) {
-        match.fn()
-        setQuery("")
-        return
-      }
+  const acceptSelected = () => {
+    const match = allSugs.find(({key}) => key === selected)
+    if (match) {
+      match.fn()
+      setQuery("")
     }
   }
 
@@ -126,6 +148,8 @@ export function IbisSearch() {
     id={s.key === selected ? activeId : undefined}
   />
 
+  const [focused, setFocused] = useState(false)
+
   return <search className="ibis-search">
     <input
       type="search"
@@ -135,7 +159,7 @@ export function IbisSearch() {
         if (e.code === "Escape") setQuery("")
         else if (e.code === "ArrowUp") setSelected(getNextPrev()[0])
         else if (e.code === "ArrowDown") setSelected(getNextPrev()[1])
-        else if (e.code === "Enter") accept()
+        else if (e.code === "Enter") acceptSelected()
         //else console.log(e.code)
       }}
       autoComplete="off"
@@ -145,35 +169,39 @@ export function IbisSearch() {
       aria-expanded={query !== ""}
       aria-controls={resultsId}
     />
-    {query && <>
-      <div
-        className="results"
-        id={resultsId}
-        role="listbox"
-        aria-activedescendant={activeId}
-      >
-        <ul role="group">
-          {topSugs.map(renderSug)}
-        </ul>
-        {listingSugs.length > 0 && <>
-          <p className="search-section">Title matches:</p>
-          <ul role="group">
-            {listingSugs.map(renderSug)}
-          </ul>
-        </>}
-        {searchSugs.length > 0 && <>
-          <p className="search-section">Content matches:</p>
-          <ul role="group">
-            {searchSugs.map(renderSug)}
-          </ul>
-        </>}
-      </div>
 
-      <div
-        className="absorb-input"
-        role="none"
-        onClick={() => setQuery("")}
-      />
-    </>}
+    <div
+      className="results"
+      id={resultsId}
+      role="listbox"
+      aria-activedescendant={activeId}
+    >
+      {contents.map(([header, sugs]) => sugs.length > 0 && <>
+        {header}
+        <ul role="group">
+          {sugs.map(s => <Option
+            key={s.key}
+            suggestion={s}
+            selected={s.key === selected}
+
+            role="option"
+            onClick={e => {
+              e.preventDefault()
+              s.fn()
+              setQuery("")
+            }}
+            onMouseOver={() => setSelected(s.key)}
+            aria-selected={s.key === selected}
+            id={s.key === selected ? activeId : undefined}
+          />)}
+        </ul>
+      </>)}
+    </div>
+
+    <div
+      className="absorb-input"
+      role="none"
+      onClick={() => setQuery("")}
+    />
   </search>
 }
