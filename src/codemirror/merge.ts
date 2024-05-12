@@ -83,8 +83,9 @@ export const mergingDoc = StateField.define<Text | null>({
         if (newDoc !== null) {
           if (prevDoc !== null) {
             // update merge
-            // TODO
-            throw RangeError("don't know how to update merge")
+            // TODO is this correct
+            console.warn("Trying to start merge on merging document")
+            return {effects: merging.reconfigure(compartment(newDoc))}
           } else {
             // start merge
             return {effects: merging.reconfigure(compartment(newDoc))}

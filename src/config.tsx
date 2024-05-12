@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
-import "./config.css"
+import { useEffect, useMemo, useReducer, useState } from "react"
 import { LsConfig } from "./globals";
 
 export const enum StoreType {
@@ -9,7 +8,8 @@ export const enum StoreType {
 }
 
 export type IbisConfig = {
-  layoutRow: boolean,
+  enableFts: boolean,
+
   storeType: StoreType,
   s3AccessKeyId: string,
   s3SecretAccessKey: string,
@@ -18,7 +18,8 @@ export type IbisConfig = {
 }
 
 const DefaultIbisConfig: IbisConfig = {
-  layoutRow: false,
+  enableFts: true,
+
   storeType: StoreType.None,
   s3AccessKeyId: "",
   s3SecretAccessKey: "",
@@ -30,149 +31,120 @@ function saveConfig(cfg: IbisConfig) {
   LsConfig.set(JSON.stringify(cfg));
 }
 
-// Migrate config from v1 format
-function tryMigrateConfigV1() {
-  if (LsConfig.get() !== null) return; // already have new-format config
+export function loadConfig(): IbisConfig {
+  const out: any = {...DefaultIbisConfig}
 
-  const cfg: {[k: string]: any} = {
-    ...DefaultIbisConfig,
-    storeType: localStorage.getItem("STORAGE_TYPE") === "\"s3" ? StoreType.S3 : DefaultIbisConfig.storeType,
-  };
-  for (let [from, to] of [
-    ["S3_ACCESS_KEY_ID", "s3AccessKeyId"],
-    ["S3_SECRET_ACCESS_KEY", "s3SecretAccessKey"],
-    ["S3_BUCKET", "s3Bucket"],
-    ["S3_PREFIX", "s3Prefix"],
-  ]) {
-    const val = JSON.parse(localStorage.getItem(from) ?? "null");
-    if (val) {
-      cfg[to] = val;
+  const raw = LsConfig.get()
+  if (raw !== null) {
+    const loaded = JSON.parse(raw)
+    if (loaded instanceof Object) {
+      for (const [k, v] of Object.entries(loaded)) {
+        out[k] = v
+      }
     }
   }
 
-  LsConfig.set(JSON.stringify(cfg));
-
-  const oldKeys = [
-    "READONLY", "SAVE_INTERVAL", "DUPLICATE_CARDS", "ETAGS", "GET_URL",
-    "STORAGE_TYPE", "WEBDAV_URL", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY",
-    "S3_BUCKET", "S3_PREFIX",
-  ];
-
-  for (let key of oldKeys) {
-    localStorage.removeItem(key);
-  }
+  return out
 }
-tryMigrateConfigV1();
 
-export function loadConfig(): IbisConfig {
-  const raw = LsConfig.get();
-  if (raw === null) return DefaultIbisConfig;
-  const loaded = JSON.parse(raw);
-  if (!(loaded instanceof Object)) return DefaultIbisConfig;
-
-  return {
-    ...DefaultIbisConfig,
-    ...loaded,
-  }
-}
+// load and save to perform any migrations
+saveConfig(loadConfig())
 
 export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
-  const cfg = useMemo(loadConfig, []);
-  const [layoutRow, setLayoutRow] = useState(cfg.layoutRow);
-  const [storeType, setStoreType] = useState(cfg.storeType);
-  const [s3AccessKeyId, setS3AccessKeyId] = useState(cfg.s3AccessKeyId);
-  const [s3SecretAccessKey, setS3SecretAccessKey] = useState(cfg.s3SecretAccessKey);
-  const [s3Bucket, setS3Bucket] = useState(cfg.s3Bucket);
-  const [s3Prefix, setS3Prefix] = useState(cfg.s3Prefix);
+  const [savedCfg, setSavedCfg] = useState(loadConfig)
+  const [cfg, updateCfg] = useReducer(
+    (old: IbisConfig, action: IbisConfig | [string, any]) => {
+      if (action instanceof Array) {
+        const [key, value] = action
+        if (!(key in old)) throw Error(`key ${key} is not a config value`)
+        const copy: IbisConfig = { ...old };
+        (copy as any)[key] = value
+        return copy
+      } else {
+        return action
+      }
+    },
+    null,
+    loadConfig
+  )
 
   const handleSubmit = () => {
-    const cfg: IbisConfig = {
-      layoutRow,
-      storeType,
-      s3AccessKeyId,
-      s3SecretAccessKey,
-      s3Bucket,
-      s3Prefix,
-    };
-    saveConfig(cfg);
-    props.onChange(cfg);
-  };
+    saveConfig(cfg)
+    setSavedCfg(cfg)
+    props.onChange(cfg)
+  }
 
-  useEffect(() => {
-    handleSubmit();
-  }, []);
+  return <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+    <label>
+      Enable full text search
 
-  return <details>
-    <summary>Configuration Options</summary>
-    <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+      <input
+        type="checkbox"
+        checked={cfg.enableFts}
+        onChange={e => updateCfg(["enableFts", e.target.checked])}
+      />
+    </label>
+
+    <label>
+      Storage
+      <select
+        value={cfg.storeType}
+        onChange={e => updateCfg(["storeType", e.target.value as StoreType])}
+      >
+        <option value="none">(demo/ephemeral)</option>
+        <option value="localstorage">Browser Storage</option>
+        <option value="s3">S3-compatible</option>
+      </select>
+    </label>
+
+    <fieldset disabled={cfg.storeType !== StoreType.S3}>
+      <legend>S3 Options</legend>
+
       <label>
-        Layout cards horizontally
-
+        Access Key ID
         <input
-          type="checkbox"
-          checked={layoutRow}
-          onChange={e => setLayoutRow(e.target.checked)}
+          type="text"
+          value={cfg.s3AccessKeyId}
+          onChange={e => updateCfg(["s3AccessKeyId", e.target.value])}
         />
       </label>
 
       <label>
-        Storage
-        <select
-          value={storeType}
-          onChange={e => setStoreType(e.target.value as StoreType)}
-        >
-          <option value="none">(demo/ephemeral)</option>
-          <option value="localstorage">Browser Storage</option>
-          <option value="s3">S3-compatible</option>
-        </select>
+        Secret Access Key
+        <input
+          type="text"
+          value={cfg.s3SecretAccessKey}
+          onChange={e => updateCfg(["s3SecretAccessKey", e.target.value])}
+        />
       </label>
 
-      <fieldset disabled={storeType !== StoreType.S3}>
-        <legend>S3 Options</legend>
+      <label>
+        Bucket URL
+        <input
+          type="text"
+          placeholder="https://bucket.s3.us-east-1.amazonaws.com/"
+          value={cfg.s3Bucket}
+          onChange={e => updateCfg(["s3Bucket", e.target.value])}
+        />
+      </label>
 
-        <label>
-          Access Key ID
-          <input
-            type="text"
-            value={s3AccessKeyId}
-            onChange={e => setS3AccessKeyId(e.target.value)}
-          />
-        </label>
+      <label>
+        (optional) Object Prefix
+        <input
+          type="text"
+          value={cfg.s3Prefix}
+          onChange={e => updateCfg(["s3Prefix", e.target.value])}
+        />
+      </label>
+    </fieldset>
 
-        <label>
-          Secret Access Key
-          <input
-            type="text"
-            value={s3SecretAccessKey}
-            onChange={e => setS3SecretAccessKey(e.target.value)}
-          />
-        </label>
-
-        <label>
-          Bucket URL
-          <input
-            type="text"
-            placeholder="https://bucket.s3.us-east-1.amazonaws.com/"
-            value={s3Bucket}
-            onChange={e => setS3Bucket(e.target.value)}
-          />
-        </label>
-
-        <label>
-          (optional) Object Prefix
-          <input
-            type="text"
-            value={s3Prefix}
-            onChange={e => setS3Prefix(e.target.value)}
-          />
-        </label>
-      </fieldset>
-
-      <button
-        type="submit"
-      >
+    <div role="group">
+      <button type="submit">
         Apply
       </button>
-    </form>
-  </details>
+      <button onClick={() => {() => updateCfg(savedCfg)}}>
+        Cancel
+      </button>
+    </div>
+  </form>
 }
