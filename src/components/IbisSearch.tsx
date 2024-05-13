@@ -1,5 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react"
 import "./IbisSearch.css"
+import { useEffect, useId, useMemo, useRef, useState, Fragment } from "react"
 import { Facade, FacadeExtern } from "../backend"
 import { IbisController } from "../App"
 import { useExtern } from "../extern"
@@ -37,12 +37,13 @@ function getSuggestions(
   query: string,
   ctl: SiteControl,
   facade: Facade,
-): [JSX.Element, Suggestion[]][] {
-  const out: [JSX.Element, Suggestion[]][] = []
+): [string, JSX.Element, Suggestion[]][] {
+  const out: [string, JSX.Element, Suggestion[]][] = []
 
   // general entries
   if (query !== "") {
     out.push([
+      "top",
       <></>,
       [
         {
@@ -72,6 +73,7 @@ function getSuggestions(
         }))
   }, [ctl, facade, query])
   out.push([
+    "card-title",
     <p className="search-section">Title matches:</p>,
     listingSugs,
   ])
@@ -89,6 +91,7 @@ function getSuggestions(
   }, [ctl, facade, query])
 
   out.push([
+    "search",
     <p className="search-section">Content matches:</p>,
     searchSugs,
   ])
@@ -108,7 +111,7 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
   }, [query])
 
   const contents = getSuggestions(query, ctl, facade)
-  const allSugs = contents.flatMap(([title, sugs]) => sugs)
+  const allSugs = contents.flatMap(([key, header, sugs]) => sugs)
 
   const getNextPrev = (): [string, string] => {
     const idx = allSugs.findIndex(({key}) => key === selected)
@@ -132,32 +135,16 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
   const resultsId = useId()
   const activeId = useId()
 
-  const renderSug = (s: Suggestion) => <Option
-    key={s.key}
-    suggestion={s}
-    selected={s.key === selected}
-
-    role="option"
-    onClick={e => {
-      e.preventDefault()
-      s.fn()
-      setQuery("")
-    }}
-    onMouseOver={() => setSelected(s.key)}
-    aria-selected={s.key === selected}
-    id={s.key === selected ? activeId : undefined}
-  />
-
-  const [focused, setFocused] = useState(false)
-
   return <search className="ibis-search">
     <input
       type="search"
       value={queryOrig}
       onChange={e => setQuery(e.target.value)}
       onKeyDown={e => {
-        if (e.code === "Escape") setQuery("")
-        else if (e.code === "ArrowUp") setSelected(getNextPrev()[0])
+        if (e.code === "Escape") {
+          setQuery("")
+          e.currentTarget.blur()
+        } else if (e.code === "ArrowUp") setSelected(getNextPrev()[0])
         else if (e.code === "ArrowDown") setSelected(getNextPrev()[1])
         else if (e.code === "Enter") acceptSelected()
         //else console.log(e.code)
@@ -170,38 +157,40 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
       aria-controls={resultsId}
     />
 
-    <div
-      className="results"
-      id={resultsId}
-      role="listbox"
-      aria-activedescendant={activeId}
-    >
-      {contents.map(([header, sugs]) => sugs.length > 0 && <>
-        {header}
-        <ul role="group">
-          {sugs.map(s => <Option
-            key={s.key}
-            suggestion={s}
-            selected={s.key === selected}
+    {query && <>
+      <div
+        className="results"
+        id={resultsId}
+        role="listbox"
+        aria-activedescendant={activeId}
+      >
+        {contents.map(([key, header, sugs]) => sugs.length > 0 && <Fragment key={key}>
+          {header}
+          <ul role="group">
+            {sugs.map(s => <Option
+              key={s.key}
+              suggestion={s}
+              selected={s.key === selected}
 
-            role="option"
-            onClick={e => {
-              e.preventDefault()
-              s.fn()
-              setQuery("")
-            }}
-            onMouseOver={() => setSelected(s.key)}
-            aria-selected={s.key === selected}
-            id={s.key === selected ? activeId : undefined}
-          />)}
-        </ul>
-      </>)}
-    </div>
+              role="option"
+              onClick={e => {
+                e.preventDefault()
+                s.fn()
+                setQuery("")
+              }}
+              onMouseOver={() => setSelected(s.key)}
+              aria-selected={s.key === selected}
+              id={s.key === selected ? activeId : undefined}
+            />)}
+          </ul>
+        </Fragment>)}
+      </div>
 
-    <div
-      className="absorb-input"
-      role="none"
-      onClick={() => setQuery("")}
-    />
+      <div
+        className="absorb-input"
+        role="none"
+        onClick={() => setQuery("")}
+      />
+    </>}
   </search>
 }
