@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
 import { useExtern, useExternOr } from "../extern"
 import { WidgetControl, Widget } from "./Widget"
@@ -29,7 +29,15 @@ export class FileWidget implements Widget {
       }
     }, [facade]);
 
+    const ref = useRef(null)
+    // attach opened file to element
+    useEffect(() => {
+      return file?.esr.attach(ref);
+    }, [file, ref]);
+
     const conflicting = useExternOr(file?.isConflicting, false);
+
+    // bottom meta
 
     // load backlinks once, we don't need it to update whenever everything loads
     // (we need useState since it's async)
@@ -38,11 +46,23 @@ export class FileWidget implements Widget {
       facade?.fts.backlinks(this.path).then(setBacklinks)
     }, [facade])
 
-    const ref = useRef(null)
-    // attach opened file to element
-    useEffect(() => {
-      return file?.esr.attach(ref);
-    }, [file, ref]);
+    const subpages = useMemo(() => {
+      if (!facade) return []
+      return Array.from(facade.listing.getSnapshot().values())
+          .filter(p => p.startsWith(this.path + ":"))
+    }, [facade])
+
+    const superpages = useMemo(() => {
+      if (!facade) return []
+      return Array.from(facade.listing.getSnapshot().values())
+          .filter(p => this.path.startsWith(p + ":"))
+    }, [facade])
+
+    const bottomMeta: [string, string[]][] = [
+      ["sub", subpages],
+      ["super", superpages],
+      ["backlinks", backlinks],
+    ]
 
     return [
       <>{this.path}</>,
@@ -57,11 +77,15 @@ export class FileWidget implements Widget {
           {!file && "loading..."}
         </section>
 
-        {backlinks.length > 0 && <p>
-          {backlinks.length} backlink{backlinks.length !== 1 && "s"}{": "}
-
-          {backlinks.map(p => <button key={p} onClick={() => ctl.open(new FileWidget(p))}>{p}</button>)}
-        </p>}
+        <ul>
+          {bottomMeta.map(([key, items]) => items.length > 0 && <li key={key}>
+            {key} ({items.length}):{" "}
+            {items.map(p => <button
+              key={p}
+              onClick={() => ctl.open(new FileWidget(p))}
+            >{p}</button>)}
+          </li>)}
+        </ul>
 
       </>,
     ]
