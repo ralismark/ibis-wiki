@@ -1,12 +1,17 @@
+import "./codemirror.css"
 import { EditorView, keymap, highlightSpecialChars, drawSelection, highlightActiveLine } from "@codemirror/view";
 import { history, historyKeymap, defaultKeymap, indentWithTab } from "@codemirror/commands";
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { bracketMatching, defaultHighlightStyle, indentService, indentUnit, syntaxHighlighting } from "@codemirror/language";
 import markdown from "./markdown";
 import { Extension } from "@codemirror/state";
 import { mergingDoc } from "./merge";
 
 const extensions: Extension = [
+  autocompletion({
+    activateOnTyping: true,
+    closeOnBlur: false,
+  }),
   mergingDoc,
   markdown,
   highlightSpecialChars(),
@@ -18,6 +23,10 @@ const extensions: Extension = [
   highlightActiveLine(),
   EditorView.lineWrapping,
   keymap.of([
+    {
+      key: "Tab",
+      run: acceptCompletion,
+    },
     indentWithTab,
     ...closeBracketsKeymap,
     ...defaultKeymap,
@@ -37,6 +46,9 @@ const extensions: Extension = [
       color: "#0000ff",
       textDecoration: "underline",
       cursor: "pointer",
+    },
+    "& .cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "sans-serif",
     },
   }),
 ];

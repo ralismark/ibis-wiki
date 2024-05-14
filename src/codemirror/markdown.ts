@@ -1,10 +1,13 @@
 import * as md from "@lezer/markdown";
-import { Language, HighlightStyle, LanguageSupport, syntaxHighlighting, defineLanguageFacet, languageDataProp } from "@codemirror/language"
+import { Language, HighlightStyle, LanguageSupport, syntaxHighlighting, defineLanguageFacet, languageDataProp, syntaxTree } from "@codemirror/language"
 import { styleTags, tags, Tag } from "@lezer/highlight";
 import { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { IbisController } from "../App";
 import { FileWidget } from "../components/FileWidget"
+import { CompletionContext, CompletionResult } from "@codemirror/autocomplete";
+import { FacadeExtern } from "../backend";
+import { shortdate, today } from "../util/calendar";
 
 // new tags
 const tx = {
@@ -61,6 +64,39 @@ const RefLink: md.MarkdownExtension & Extension = {
       }
     })
   ],
+}
+
+async function refLinkCompletion(context: CompletionContext): Promise<CompletionResult | null> {
+  const node = syntaxTree(context.state).resolveInner(context.pos, -1)
+  if (node.name === "RefLink") {
+    const facade = FacadeExtern.getSnapshot()
+    if (!facade) return null
+
+    const todayPath = shortdate(today)
+
+    return {
+      from: node.firstChild?.to ?? node.from + 2,
+      to: node.lastChild?.from ?? context.pos,
+      options: [
+        {
+          label: "today",
+          displayLabel: todayPath,
+          apply: todayPath,
+          boost: 1,
+        },
+        // since it might not exist yet
+        {
+          label: todayPath,
+          boost: 1,
+        },
+        ...Array.from(facade.listing.getSnapshot()).map(name => ({
+          label: name,
+        }))
+      ],
+      validFor: /[^\[]+/,
+    }
+  }
+  return null
 }
 
 // Language Definition --------------------------------------------------------
@@ -121,6 +157,9 @@ export default new LanguageSupport(
         "QuoteMark": tags.punctuation,
       })]}
     ]),
+    languageData: {
+      autocomplete: refLinkCompletion,
+    },
   }),
   [
     RefLink,
