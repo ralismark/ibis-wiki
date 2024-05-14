@@ -1,18 +1,16 @@
 # ibis-wiki
-Yet another wiki project, built from the ground up.
 
-This is inspired by the likes of [TiddlyWiki](https://tiddlywiki.com/) and [Logseq](https://logseq.com/), but designed from the ground up to address some of my gripes with them.
-It's wasn't originally meant for use by others, and isn't exactly that stable, but if you want to play around with it, definitely feel free to!
+A scrappy little personal wiki, built to fit a personal niche.
+See <https://ralismark.xyz/ibis-wiki/> for the production (i.e. latest commit) version, or run locally with `npm i` + `npm run dev`.
 
-As of 21 July 2023, I've been using this for a bit over two years (see: [dogfooding](https://indieweb.org/selfdogfood)).
+This is inspired by the likes of [TiddlyWiki](https://tiddlywiki.com/) and [Logseq](https://logseq.com/), designed from the ground up to address some of my gripes with them.
+It's not really designed with public use in mind (**if you do want to use this, let me know!**), but definitely feel free to play around with it!
 
-Note: the autosave mechanism does not have any protection against overwriting newer version of the file and causing data loss.
-This means that you should be very careful when you have multiple instances of this wiki open at the same time (e.g. across different devices).
+This wiki is a purely static site, and does not have its own backend!
+Instead, notes are stored via an external storage provider -- the only kind supported at the moment is S3 (including S3-compatible ones like Backblaze).
 
-## Running
+I've been using this from early 2021 to at least May 2024, and I don't think I'll be switching anytime soon (see: [dogfooding](https://indieweb.org/selfdogfood)).
 
-See <https://ralismark.xyz/ibis-wiki/> for the production deployment of this.
-You can run locally with `npm i` + `npm run dev`.
-
-`ibis-wiki` will save and load documents from an external storage provider -- the only kind supported at the moment is S3 (including S3-compatible ones like backblaze).
-Other than that, there isn't any sort of backend, and you don't need to run anything yourself to use this.
+Older versions had issues with saving that meant that having a file open in multiple tabs/devices could cause data loss.
+This has now been fixed!
+It is safe to have multiple sessions open at the same time :)
