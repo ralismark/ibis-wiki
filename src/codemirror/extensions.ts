@@ -6,6 +6,7 @@ import { bracketMatching, defaultHighlightStyle, indentService, indentUnit, synt
 import markdown from "./markdown";
 import { Extension } from "@codemirror/state";
 import { mergingDoc } from "./merge";
+import breakindent from "./breakindent"
 
 const extensions: Extension = [
   autocompletion({
@@ -34,6 +35,7 @@ const extensions: Extension = [
   ]),
   indentService.of(() => 0), // no indent
   indentUnit.of("    "), // 4-space indent
+  breakindent,
   EditorView.theme({
     "& .cm-content": {
       fontFamily: "sans-serif",
