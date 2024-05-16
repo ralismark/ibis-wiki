@@ -68,29 +68,31 @@ const RefLink: md.MarkdownExtension & Extension = {
 
 async function refLinkCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const node = syntaxTree(context.state).resolveInner(context.pos, -1)
+
   if (node.name === "RefLink") {
     const facade = FacadeExtern.getSnapshot()
     if (!facade) return null
 
     const todayPath = shortdate(today)
 
+    const listing = facade.listing.getSnapshot()
+    const listingArray = Array.from(listing)
+    if (!listing.has(todayPath)) listingArray.push(todayPath) // since it might not exist yet
+
     return {
       from: node.firstChild?.to ?? node.from + 2,
-      to: node.lastChild?.from ?? context.pos,
+      to: node.to,
       options: [
+        // complete [[today]] to the actual card for today
         {
-          label: "today",
           displayLabel: todayPath,
-          apply: todayPath,
+          label: "today]]",
+          apply: todayPath + "]]",
           boost: 1,
         },
-        // since it might not exist yet
-        {
-          label: todayPath,
-          boost: 1,
-        },
-        ...Array.from(facade.listing.getSnapshot()).map(name => ({
-          label: name,
+        ...listingArray.map(name => ({
+          displayLabel: name,
+          label: name + "]]",
         }))
       ],
       validFor: /[^\[]+/,
@@ -122,6 +124,7 @@ export default new LanguageSupport(
   defineMdLanguage({
     name: "markdown",
     parser: md.parser.configure([
+      // TODO disable indent = code and underlined headings
       md.Strikethrough,
       RefLink,
       {props: [styleTags({
