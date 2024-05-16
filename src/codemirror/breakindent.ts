@@ -1,5 +1,20 @@
-import { EditorView, Decoration } from "@codemirror/view"
-import { EditorState, StateField } from "@codemirror/state"
+import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate } from "@codemirror/view"
+import { EditorState, RangeSetBuilder, StateField } from "@codemirror/state"
+
+class Cache<K, V extends object> {
+  entries: Map<K, WeakRef<V>> = new Map()
+
+  get(key: K, fallback: () => V): V {
+    let v = this.entries.get(key)?.deref()
+    if (v === undefined) {
+      v = fallback()
+      this.entries.set(key, new WeakRef(v))
+    }
+    return v
+  }
+}
+
+const decorationCache = new Cache<number, Decoration>()
 
 function indentSize(line: string): number {
   let indent = 0
@@ -15,46 +30,47 @@ function indentSize(line: string): number {
   return indent
 }
 
-function getDecorations(state: EditorState) {
-  const decorations = []
+const breakindent = ViewPlugin.fromClass(class {
+  decorations: DecorationSet
 
-  for (let i = 0; i < state.doc.lines; i++) {
-    const line = state.doc.line(i + 1)
-    const indentCh = indentSize(line.text)
-    if (indentCh === 0) continue
+  get(view: EditorView): DecorationSet {
+    const builder = new RangeSetBuilder<Decoration>()
+    for (const {from, to} of view.visibleRanges) {
+      for (let pos = from; pos <= to; ) {
+        const line = view.state.doc.lineAt(pos)
 
-    const linerwapper = Decoration.line({
-      attributes: {
-        style: `--indent: ${indentCh};`,
-        class: "breakindent"
+        const indentCh = indentSize(line.text)
+        if (indentCh > 0) {
+          const deco = decorationCache.get(indentCh, () => Decoration.line({
+            attributes: {
+              style: `--indent: ${indentCh}`,
+              class: "breakindent",
+            },
+          }))
+          builder.add(line.from, line.from, deco)
+        }
+
+        pos = line.to + 1
       }
-    })
-
-    decorations.push(linerwapper.range(line.from, line.from))
+    }
+    return builder.finish()
   }
 
-  return Decoration.set(decorations)
-}
+  constructor(view: EditorView) {
+    this.decorations = this.get(view)
+  }
 
-/**
- * Plugin that makes line wrapping in the editor respect the identation of the line.
- * It does this by adding a line decoration that adds margin-left (as much as there is indentation),
- * and adds the same amount as negative "text-indent". The nice thing about text-indent is that it
- * applies to the initial line of a wrapped line.
- */
-const breakindent = StateField.define({
-  create(state) {
-    return getDecorations(state)
-  },
-  update(deco, tr) {
-    if (!tr.docChanged) return deco
-    return getDecorations(tr.state)
-  },
-  provide: (f) => EditorView.decorations.from(f)
+  update(update: ViewUpdate) {
+    if (update.docChanged || update.viewportChanged) {
+      this.decorations = this.get(update.view)
+    }
+  }
+}, {
+  decorations: v => v.decorations,
 })
 
 export default [
-  breakindent.extension,
+  breakindent,
   EditorView.theme({
     "& .breakindent": {
       // TODO use text-indent: hanging when that's widely available
