@@ -38,24 +38,6 @@
 			background: hsl(var(--bg), 100%, 50%);
 		}
 	}
-
-	td[data-date="1"]::before {
-		pointer-events: none;
-
-		display: block;
-		position: absolute;
-		top: 0;
-		z-index: 10;
-
-		content: var(--month-name);
-		color: var(--body-fg);
-	}
-
-	td[data-date="1"]:first-child::before,
-	td[data-date="1"][data-month="1"]::before
-	{
-		content: var(--month-name) attr(data-year);
-	}
 }
 
 .CalendarWidget {
