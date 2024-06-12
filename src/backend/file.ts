@@ -242,6 +242,12 @@ export class File {
           const { content: remoteContent, etag: remoteETag } = await store.load(path)
           if (done.signal.aborted) return // more or less fix the above issue
           const stashed: StashedRepr | null = JSON.parse(LsWal.getItem(path) ?? "null")
+          if (stashed?.content === remoteContent) {
+            // There's a stashed version, but it's not dirty? This shouldn't
+            // happen, but it's been observed to.
+            toast.warn(`"${path}" restored from local copy but isn't dirty`)
+            LsWal.removeItem(path)
+          }
 
           const conflict = stashed !== null && stashed.etag !== remoteETag
           const remoteText = Text.of(remoteContent.split(/\r?\n/))
@@ -305,30 +311,55 @@ export class File {
   private dirty() {
     this.stash()
 
-    if (this.runningPut !== null) return // there is already a task running
+    if (this.runningPut !== null) {
+      return // there is already a task running
+    }
+
+    // It's possible for the put task to immediately finish, before the
+    // assignment can complete. To handle that, we need another variable.
+    let putDone = false
+
     this.runningPut = (async () => {
       NumDirty.set(NumDirty.getSnapshot() + 1)
       try {
+        // Repeat entire syncing logic if there have been more changes in the
+        // meantime.
         while (this.shouldPut()) {
+
+          // Ensure that there aren't racing syncs between instances of this
+          // file.
           // TODO abort lock if we receive a broadcast that the file got synced
           await navigator.locks.request(`ibis/file/${this.path}/put`, {
             signal: this.abort.signal,
           }, async () => {
+            // If there was lock contention, the other instance of this file
+            // could've finished syncing before we acquired the lock.
             if (!this.shouldPut()) return
 
+            // Bit of sleep to reduce redundant syncs.
             await sleep(DEBOUNCE_MS)
 
+            // Since we have the lock, the only way for this condition to be
+            // true is for the user to reverse all edits made to the file since
+            // we last synced. Which is very unlikely.
+            // TODO is this needed?
+            if (!this.shouldPut()) return
+
             const content = this.doc()
-            if (!this.shouldPut()) return // TODO is this needed?
 
             try {
+              // Actually do the syncing.
               NumSyncing.set(NumSyncing.getSnapshot() + 1)
               const { etag } = await this.store.write(
                 this.path,
                 content.toString(),
                 this.baseETag,
               )
+              // success :>
               this.baseETag = this.remoteETag = etag
+              // Rest of success logic outside this try/catch/finally block, so
+              // exceptions there aren't caught by the error handling for
+              // store.write.
             } catch(e) {
               if (e instanceof ETagMismatchError) {
                 // enter conflicted state
@@ -351,16 +382,21 @@ export class File {
                 toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
                 console.debug("[file]", this.path, this.id, "conflict", this.remoteETag, this.baseETag)
               } else {
+                // a different error, e.g. network down
                 toast.error(`Couldn't save "${this.path}": ${e}`)
               }
 
-              return
+              return // exit lock
             } finally {
+              // Whether it succeeded or not, there is one less active write
+              // request to the store.
+              // TODO maybe this should be handled in Facade?
               NumSyncing.set(NumSyncing.getSnapshot() - 1)
             }
 
             this.lastSaved = content
-            this.stash() // update etag
+            this.stash() // update etag of stash, shouldn't change content
+
             const msg: MsgUpdate = {
               type: "update",
               lastSaved: content.toJSON(),
@@ -371,18 +407,26 @@ export class File {
             this.bc.postMessage(msg)
           })
         }
-        if (this.baseETag === this.remoteETag) this.clearStash()
+
+        // if we're not in a conflict, and there's no local changes, then we can
+        // safely delete the stash
+        if (this.baseETag === this.remoteETag && this.lastSaved.eq(this.doc())) this.clearStash()
+
       } catch(e) {
         if (e instanceof DOMException && e.name === "AbortError") {
           // catch abort
         } else {
+          // unexpected error (sync errors are handled within lock)
           throw e
         }
       } finally {
-        NumDirty.set(NumDirty.getSnapshot() - 1)
+        NumDirty.set(NumDirty.getSnapshot() - 1) // TODO this isn't accurate as it excludes unmerged/stashed entries
         this.runningPut = null
+        putDone = true // in case we were too fast
       }
     })()
+
+    if (putDone) this.runningPut = null
   }
 
   // End a conflict by committing the local version to remote
