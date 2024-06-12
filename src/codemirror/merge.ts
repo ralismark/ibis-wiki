@@ -41,12 +41,15 @@ export const updateOriginalDoc: StateEffectType<{doc: Text, changes: ChangeSet}>
 
 export const merging = new Compartment();
 
-export function compartment(m: Text | null): Extension[] {
+function compartment(m: Text | null): Extension[] {
   if (m === null) return []
-  return unifiedMergeView({ original: m })
+  return unifiedMergeView({
+    original: m,
+  })
 }
 
-// HACK effects to fix the compartment e.g. after fromJSON
+// HACK effect to make the compartment reflect the state of mergingDoc e.g.
+// after fromJSON
 export const fixMerging = StateEffect.define<null>({})
 
 // effect to set whether we're merging
