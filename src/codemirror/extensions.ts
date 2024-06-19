@@ -45,13 +45,20 @@ const extensions: Extension = [
       outline: "none",
     },
     "& .cm-ibis-link": {
-      color: "#0000ff",
+      color: "#7777ee",
       textDecoration: "underline",
       cursor: "pointer",
     },
     "& .cm-tooltip.cm-tooltip-autocomplete > ul": {
       fontFamily: "sans-serif",
     },
-  }),
+    "& .cm-tooltip": {
+      border: "1px solid var(--stroke)",
+      backgroundColor: "var(--body-bg)",
+    },
+    "& .cm-cursor": {
+      borderLeftColor: "#aaa",
+    },
+  }, { dark: true }),
 ];
 export default extensions;
