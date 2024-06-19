@@ -72,10 +72,10 @@ const breakindent = ViewPlugin.fromClass(class {
 export default [
   breakindent,
   EditorView.theme({
-    "& .breakindent": {
-      // TODO use text-indent: hanging when that's widely available
-      paddingLeft: "calc(var(--indent) * 0.25em)",
-      textIndent: "calc(var(--indent) * -0.25em)",
+    "& .cm-line": {
+      // TODO use text-indent: hanging when that's widely available?
+      paddingLeft: "calc(var(--indent, 0) * 0.25em)",
+      textIndent: "calc(var(--indent, 0) * -0.25em)",
     },
   }),
 ]
