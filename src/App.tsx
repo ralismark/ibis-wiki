@@ -165,6 +165,8 @@ export function App() {
       />)}
     />
 
-    <ToastContainer />
+    <ToastContainer
+      theme={window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"}
+    />
   </>
 }
