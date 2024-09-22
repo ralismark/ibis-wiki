@@ -8,7 +8,6 @@ import { dateWeek, dateWeekYear, shortdate, today } from "./util/calendar";
 import { LsWal } from "./globals";
 import { ToastContainer } from "react-toastify";
 import { NumDirty, NumSyncing } from "./backend/file";
-import { NumReindexing } from "./backend/ftsearch";
 import { SiteControl, DummySiteControl, Widget, WidgetControl, widgetToString } from "./components/Widget";
 import { FileWidget } from "./components/FileWidget";
 import { ConfigWidget } from "./components/ConfigWidget";
@@ -31,12 +30,6 @@ function SyncIndicator() {
     aria-label="Dirty"
     aria-checked={dirty > 0}
   />
-}
-
-function ReindexIndicator() {
-  const reindexing = useExtern(NumReindexing) > 0
-  return reindexing && <span
-  >Indexing</span>
 }
 
 function initialWidgets() {
@@ -152,7 +145,6 @@ export function App() {
         >🔧</button>
       </div>
       <div className="right">
-        <ReindexIndicator />
         <SyncIndicator />
       </div>
     </header>

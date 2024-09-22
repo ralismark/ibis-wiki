@@ -3,14 +3,12 @@ import { IDB_FTSEARCH } from "../globals";
 import { assertUnreachable, batched } from "../util";
 import { Snapshot } from "./store/bridge";
 import { tokenise, outlinks } from "./tokenise"
-import { ExternState } from "../extern";
+import { toast } from "react-toastify";
 
 // based on <https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295>
 
 // Version of summaries. Bump this every time the scheme changes, to force refresh.
 const VERSION = 2
-
-export const NumReindexing = new ExternState<number>(0)
 
 type FtsRow = {
   path: string
@@ -94,66 +92,67 @@ export class FullTextSearch {
     // state when the page is idle, burning CPU handling ev.type == "all"
     // updates.
 
-    let isReindex = false
-    const markAsReindex = () => {
-      isReindex = true
-      NumReindexing.set(NumReindexing.getSnapshot() + 1)
-    }
+    if (ev.type === "single") {
+      const tok = (await tokenise)
 
-    try {
-      if (ev.type === "single") {
-        const tok = (await tokenise)
+      await this.tr("fts", "readwrite", async tr => {
+        const fts = tr.objectStore("fts")
+        const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
+        if (etag !== ev.etag) {
+          if (ev.etag !== null) {
+            const row: FtsRow = {
+              path: ev.path,
+              etag: ev.etag,
+              terms: tok(ev.content),
+              refs: outlinks(ev.content),
+            }
+            fts.put(row)
+          } else {
+            fts.delete(ev.path)
+          }
+        }
+      })
+    } else if (ev.type === "all") {
+      const remListing = new Map(ev.listing);
 
-        await this.tr("fts", "readwrite", async tr => {
-          const fts = tr.objectStore("fts")
-          const etag = (await this.r(fts.get(ev.path)) as FtsRow | null)?.etag
-          if (etag !== ev.etag) {
-            if (ev.etag !== null) {
-              const row: FtsRow = {
-                path: ev.path,
-                etag: ev.etag,
-                terms: tok(ev.content),
-                refs: outlinks(ev.content),
+      // figure out which rows we need to fetch
+      await this.tr("fts", "readwrite", async tr => {
+        const fts = tr.objectStore("fts")
+
+        await new Promise(resolve => {
+          const r = fts.openCursor()
+          r.onsuccess = () => {
+            const cursor = r.result
+            if (cursor) {
+              const row = cursor.value as FtsRow
+              const listing = remListing.get(row.path)
+
+              if (listing === undefined || listing.etag === null) {
+                console.log("[FTS]", "remove row:", row)
+                cursor.delete()
+              } else if (listing.etag === row.etag) {
+                remListing.delete(row.path)
               }
-              fts.put(row)
+
+              cursor.continue()
             } else {
-              fts.delete(ev.path)
+              resolve(undefined)
             }
           }
         })
-      } else if (ev.type === "all") {
-        const remListing = new Map(ev.listing);
+      })
 
-        // figure out which rows we need to fetch
-        await this.tr("fts", "readwrite", async tr => {
-          const fts = tr.objectStore("fts")
+      if (remListing.size === 0) return
 
-          await new Promise(resolve => {
-            const r = fts.openCursor()
-            r.onsuccess = () => {
-              const cursor = r.result
-              if (cursor) {
-                const row = cursor.value as FtsRow
-                const listing = remListing.get(row.path)
 
-                if (listing === undefined || listing.etag === null) {
-                  console.log("[FTS]", "remove row:", row)
-                  cursor.delete()
-                } else if (listing.etag === row.etag) {
-                  remListing.delete(row.path)
-                }
+      let progress = 0
+      const toastId = toast.loading(`Reindexing ${remListing.size} notes`, {
+        progress: 0,
+        autoClose: 1,
+      })
 
-                cursor.continue()
-              } else {
-                resolve(undefined)
-              }
-            }
-          })
-        })
-
-        if (remListing.size > 0) markAsReindex()
-
-        console.log("[FTS]", "fetching " + remListing.size + " rows")
+      try {
+        console.log("[FTS]", "reindexing " + remListing.size + " rows")
 
         // fetch those rows
         const rowsp = Array.from(remListing.keys()).map(async path => {
@@ -179,15 +178,18 @@ export class FullTextSearch {
           rows => this.tr("fts", "readwrite", tr => {
             const fts = tr.objectStore("fts")
             for (const row of rows) fts.put(row)
+
+            progress += rows.length
+            toast.update(toastId, { progress: progress / remListing.size })
           }),
           err => {
             console.log(err)
           }
         )
-      } else assertUnreachable(ev)
-    } finally {
-      if (isReindex) NumReindexing.set(NumReindexing.getSnapshot() - 1)
-    }
+      } finally {
+        toast.done(toastId)
+      }
+    } else assertUnreachable(ev)
   }
 
   search(query: string): Promise<string[]> {
