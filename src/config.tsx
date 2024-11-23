@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useReducer, useState } from "react"
+import { Fragment, useEffect, useId, useMemo, useReducer, useState } from "react"
 import { LsConfig } from "./globals";
+import "./config.css";
 
 export const enum StoreType {
   None = "none",
@@ -74,7 +75,7 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
     props.onChange(cfg)
   }
 
-  return <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
+  return <form className="Config" onSubmit={e => { e.preventDefault(); handleSubmit(); }}>
     <label>
       Enable full text search
 
@@ -85,58 +86,55 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
       />
     </label>
 
-    <label>
-      Storage
-      <select
-        value={cfg.storeType}
-        onChange={e => updateCfg(["storeType", e.target.value as StoreType])}
-      >
-        <option value="none">(demo/ephemeral)</option>
-        <option value="localstorage">Browser Storage</option>
-        <option value="s3">S3-compatible</option>
-      </select>
-    </label>
+    <RadioTabs
+      legend="Storage"
 
-    <fieldset disabled={cfg.storeType !== StoreType.S3}>
-      <legend>S3 Options</legend>
+      value={cfg.storeType}
+      onChange={v => updateCfg(["storeType", v])}
 
-      <label>
-        Access Key ID
-        <input
-          type="text"
-          value={cfg.s3AccessKeyId}
-          onChange={e => updateCfg(["s3AccessKeyId", e.target.value])}
-        />
-      </label>
+      entries={[
+        [StoreType.None, "(ephemeral, for demo)", undefined],
+        [StoreType.LocalStorage, "Browser storage", undefined],
+        [StoreType.S3, "S3-Compatible", <>
+          <label>
+            Access Key ID
+            <input
+              type="text"
+              value={cfg.s3AccessKeyId}
+              onChange={e => updateCfg(["s3AccessKeyId", e.target.value])}
+            />
+          </label>
 
-      <label>
-        Secret Access Key
-        <input
-          type="text"
-          value={cfg.s3SecretAccessKey}
-          onChange={e => updateCfg(["s3SecretAccessKey", e.target.value])}
-        />
-      </label>
+          <label>
+            Secret Access Key
+            <input
+              type="text"
+              value={cfg.s3SecretAccessKey}
+              onChange={e => updateCfg(["s3SecretAccessKey", e.target.value])}
+            />
+          </label>
 
-      <label>
-        Bucket URL
-        <input
-          type="text"
-          placeholder="https://bucket.s3.us-east-1.amazonaws.com/"
-          value={cfg.s3Bucket}
-          onChange={e => updateCfg(["s3Bucket", e.target.value])}
-        />
-      </label>
+          <label>
+            Bucket URL
+            <input
+              type="text"
+              placeholder="https://bucket.s3.us-east-1.amazonaws.com/"
+              value={cfg.s3Bucket}
+              onChange={e => updateCfg(["s3Bucket", e.target.value])}
+            />
+          </label>
 
-      <label>
-        (optional) Object Prefix
-        <input
-          type="text"
-          value={cfg.s3Prefix}
-          onChange={e => updateCfg(["s3Prefix", e.target.value])}
-        />
-      </label>
-    </fieldset>
+          <label>
+            (optional) Object Prefix
+            <input
+              type="text"
+              value={cfg.s3Prefix}
+              onChange={e => updateCfg(["s3Prefix", e.target.value])}
+            />
+          </label>
+        </>],
+      ]}
+    />
 
     <div role="group">
       <button type="submit">
@@ -147,4 +145,32 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
       </button>
     </div>
   </form>
+}
+
+function RadioTabs(props: {
+  onChange: (value: string) => any,
+  value: string,
+  legend?: string,
+  entries: [string, string, JSX.Element?][],
+}) {
+  const radioGroup = useId()
+
+  return <fieldset className="RadioTabs">
+    {props.legend && <legend>{props.legend}</legend>}
+
+    {props.entries.map(([key, label, contents]) => <Fragment key={key}>
+      <label>
+        <input
+          type="radio"
+          name={radioGroup}
+          value={key}
+
+          checked={props.value === key}
+          onChange={() => props.onChange(key)}
+        />
+        {label}
+      </label>
+      {contents && <fieldset disabled={props.value !== key}>{contents}</fieldset>}
+    </Fragment>)}
+  </fieldset>
 }
