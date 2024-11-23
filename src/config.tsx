@@ -1,34 +1,46 @@
 import { Fragment, useEffect, useId, useMemo, useReducer, useState } from "react"
 import { LsConfig } from "./globals";
+import { GoogleDriveStoreConfig } from "./google"
 import "./config.css";
 
 export const enum StoreType {
   None = "none",
   LocalStorage = "localstorage",
   S3 = "s3",
+  GoogleDrive = "gdrive",
 }
 
 export type IbisConfig = {
   enableFts: boolean,
 
   storeType: StoreType,
+
   s3AccessKeyId: string,
   s3SecretAccessKey: string,
   s3Bucket: string,
   s3Prefix: string,
+
+  gdriveAccessToken: string,
+  gdriveTokenExpiry: string,
+  gdriveEmail: string,
 }
 
 const DefaultIbisConfig: IbisConfig = {
   enableFts: true,
 
   storeType: StoreType.None,
+
   s3AccessKeyId: "",
   s3SecretAccessKey: "",
   s3Bucket: "",
-  s3Prefix: ""
+  s3Prefix: "",
+
+  gdriveAccessToken: "",
+  gdriveTokenExpiry: "0000-00-00T00:00:00.000Z",
+  gdriveEmail: "",
 };
 
-function saveConfig(cfg: IbisConfig) {
+export function saveConfig(cfg: IbisConfig) {
   LsConfig.set(JSON.stringify(cfg));
 }
 
@@ -133,6 +145,7 @@ export function Config(props: { onChange: (cfg: IbisConfig) => void }) {
             />
           </label>
         </>],
+        [StoreType.GoogleDrive, "Google Drive", <GoogleDriveStoreConfig cfg={cfg} updateCfg={updateCfg} />],
       ]}
     />
 

@@ -16,6 +16,8 @@
     "@codemirror/state": "^6.2.1",
     "@codemirror/view": "^6.14.1",
     "@lezer/markdown": "^1.0.5",
+    "@types/gapi": "^0.0.47",
+    "@types/gsi": "^0.0.4",
     "aws4fetch": "^1.0.17",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
