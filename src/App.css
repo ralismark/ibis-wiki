@@ -7,28 +7,6 @@ pre {
   margin-bottom: 0;
 }
 
-form label,
-form fieldset {
-  display: block;
-  clear: both;
-}
-
-form label > input,
-form label > select {
-  float: right;
-}
-
-form fieldset[disabled] label,
-form fieldset[disabled] legend
-{
-  color: #808080;
-}
-
-form fieldset {
-  border: 1px solid var(--stroke);
-  border-radius: 0.2em;
-}
-
 /* Top-level App ----------------------------------------------------------- */
 
 :root {
