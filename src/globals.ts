@@ -8,3 +8,6 @@ export const LsStore = LsIbis.scoped("store/");
 export const DEBOUNCE_MS = 2000;
 export const STATE_REPLY_TIMEOUT_MS = 100;
 export const IDB_FTSEARCH = "ibis/fts";
+
+// query params
+export const QUERY_PARAM_WIDGETS = "w"
