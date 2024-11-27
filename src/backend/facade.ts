@@ -1,5 +1,5 @@
 import { ExternState } from "../extern";
-import { IStore, InMemoryStore, LocalStorageStore, S3Store, Store, SummaryChanged } from "./store";
+import { GDriveStore, IStore, InMemoryStore, LocalStorageStore, S3Store, Store, SummaryChanged } from "./store";
 import { assertUnreachable } from "../util";
 import { IbisConfig, StoreType } from "../config";
 import demoData from "../demoData";
@@ -14,6 +14,9 @@ function providerFromConfig(config: IbisConfig): IStore {
       return new LocalStorageStore()
     case StoreType.S3:
       return new S3Store(config)
+    case StoreType.GoogleDrive:
+      console.log(new GDriveStore(config))
+      return new InMemoryStore(demoData)
     default:
       assertUnreachable(config.storeType)
   }

@@ -1,6 +1,7 @@
 export { Store } from "./bridge"
 export type { IStore, SummaryChanged } from "./bridge"
 export { InMemoryStore, LocalStorageStore, HTTPError, S3Store } from "./providers"
+export { GDriveStore } from "./gdrive"
 
 export type ETag = string | null
 

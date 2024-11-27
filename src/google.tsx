@@ -29,6 +29,7 @@ export function GoogleDriveStoreConfig(props: { cfg: IbisConfig, updateCfg: (op:
       Email
       <input
         type="text"
+        placeholder="example@gmail.com"
         value={props.cfg.gdriveEmail}
         onChange={e => props.updateCfg(["gdriveEmail", e.target.value])}
       />
