@@ -2,11 +2,11 @@ import "./CalendarWidget.css"
 import { useState } from "react"
 import { FacadeExtern } from "../backend"
 import { useExtern, useExternOr } from "../extern"
-import { WidgetControl, Widget } from "./Widget"
+import { WidgetControl, IWidget } from "./Widget"
 import { dateRange, shortdate, today } from "../util/calendar"
 import { FileWidget } from "./FileWidget"
 
-export class CalendarWidget implements Widget {
+export class CalendarWidget implements IWidget {
   show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
     const facade = useExtern(FacadeExtern)
     const listing = useExternOr(facade?.listing, new Set())
@@ -75,9 +75,5 @@ export class CalendarWidget implements Widget {
 
       </>
     ]
-  }
-
-  typename(): string {
-      return "CalendarWidget"
   }
 }

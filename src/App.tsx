@@ -5,11 +5,11 @@ import { Config, IbisConfig, loadConfig } from "./config";
 import { Facade, FacadeExtern } from "./backend";
 import { ExternState, useExtern, useExternOr } from "./extern";
 import { dateWeek, dateWeekYear, shortdate, today } from "./util/calendar";
-import { LsWal } from "./globals";
-import { ToastContainer } from "react-toastify";
+import { LsWal, QUERY_PARAM_WIDGETS } from "./globals";
+import { ToastContainer, toast } from "react-toastify";
 import { NumDirty, NumSyncing } from "./backend/file";
-import { SiteControl, DummySiteControl, Widget, WidgetControl, widgetToString } from "./components/Widget";
-import { FileWidget } from "./components/FileWidget";
+import { SiteControl, DummySiteControl, Widget, WidgetControl, widgetToString, widgetTypename, stringToWidget } from "./components/Widget";
+import { FileWidget, TodayWidget } from "./components/FileWidget";
 import { ConfigWidget } from "./components/ConfigWidget";
 import { CalendarWidget } from "./components/CalendarWidget";
 import { IbisSearch } from "./components/IbisSearch";
@@ -33,15 +33,30 @@ function SyncIndicator() {
 }
 
 function initialWidgets() {
-  const widgets: Widget[] = [
-    new CalendarWidget(),
-    new FileWidget("index"),
-    new FileWidget(shortdate(today)),
-  ]
+  const widgets: Widget[] = (() => {
+    // try load from query parameter
+    const params = new URLSearchParams(location.search)
+    const prevWidgets = params.get(QUERY_PARAM_WIDGETS)
+    if (prevWidgets !== null) {
+      try {
+        return JSON.parse(prevWidgets).map(stringToWidget)
+      } catch(e) {
+        toast.error(`Couldn't restore open widgets: ${e}`)
+      }
+    }
+
+    // defaults
+    return [
+      new CalendarWidget(),
+      new FileWidget("index"),
+      new TodayWidget(),
+    ]
+  })()
+
+  // but also open all dirty pages, so they sync
   for (const dirtyPath of LsWal.keys()) {
-    const newWidget = new FileWidget(dirtyPath)
-    if (widgets.every(w => widgetToString(w) !== widgetToString(newWidget))) {
-      widgets.push(newWidget)
+    if (!widgets.some(w => w instanceof FileWidget && w.path === dirtyPath)) {
+      widgets.push(new FileWidget(dirtyPath))
     }
   }
   return widgets
@@ -63,7 +78,7 @@ function WidgetCard(props: { widget: Widget, ctl: WidgetControl, focusHook: any 
   }, [elem, props.focusHook])
 
   return <article
-    className={"WidgetCard " + props.widget.typename()}
+    className={"WidgetCard " + widgetTypename(props.widget)}
     ref={elem}
   >
     <h1>
@@ -97,6 +112,15 @@ export function App() {
   }, [facade]);
 
   const [widgets, setWidgets] = useState<Widget[]>(initialWidgets())
+  useEffect(() => {
+    // set query param so we can reopen
+    const serialised = JSON.stringify(widgets.map(widgetToString))
+
+    const url = new URL(location.href)
+    url.searchParams.set(QUERY_PARAM_WIDGETS, serialised)
+
+    history.replaceState(null, "", url)
+  }, [widgets])
 
   // TODO this is a bit of a hack to force re-render
   const focuses = useRef(new WeakMap<Widget, Symbol>())
@@ -135,6 +159,10 @@ export function App() {
       </div>
       <div className="mid">
         <IbisSearch ctl={ctl} facade={facade} />
+        <button
+          title="Today"
+          onClick={() => openWidget(new TodayWidget(), false)}
+        >☀️</button>
         <button
           title="Calendar"
           onClick={() => openWidget(new CalendarWidget(), true)}
