@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
 import { useExtern, useExternOr } from "../extern"
-import { WidgetControl, Widget } from "./Widget"
+import { WidgetControl, IWidget } from "./Widget"
+import { shortdate, today } from "../util/calendar"
 
-export class FileWidget implements Widget {
+export class FileWidget implements IWidget {
   readonly path: string
 
   constructor(path: string) {
@@ -90,8 +91,18 @@ export class FileWidget implements Widget {
       </>,
     ]
   }
+}
 
-  typename(): string {
-      return "FileWidget"
+export class TodayWidget extends FileWidget {
+  constructor() {
+    super(shortdate(today))
+  }
+
+  show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
+    const [, body] = super.show(ctl)
+    return [
+      <>Today: {this.path}</>,
+      body,
+    ]
   }
 }
