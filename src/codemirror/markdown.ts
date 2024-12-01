@@ -70,6 +70,30 @@ async function refLinkCompletion(context: CompletionContext): Promise<Completion
   return null
 }
 
+// Math -----------------------------------------------------------------------
+
+const mathDelim: md.DelimiterType = { resolve: "Math", mark: "MathMark" }
+
+const Math: md.MarkdownExtension & Extension = {
+  defineNodes: ["Math", "MathMark"],
+  parseInline: [{
+    name: "Math",
+    before: "Link",
+    parse(cx, next, pos) {
+      if (next == 36 /* $ */) return cx.addDelimiter(mathDelim, pos, pos+1, true, ![9, 10, 11, 12, 13, 32].includes(cx.char(pos-1)))
+        return -1
+    }
+  }],
+  props: [
+    styleTags({
+      Math: tags.monospace,
+      MathMark: tags.punctuation,
+    }),
+  ],
+  extension: [
+  ],
+}
+
 // Language Definition --------------------------------------------------------
 
 // compatibility between `@lezer/markdown` and `@codemirror/language`, since
@@ -96,6 +120,7 @@ export default new LanguageSupport(
       // TODO disable indent = code and underlined headings
       md.Strikethrough,
       RefLink,
+      Math,
       {props: [styleTags({
         // formatting
         "Emphasis/...": tags.emphasis,
@@ -123,10 +148,13 @@ export default new LanguageSupport(
         "InlineCode FencedCode CodeText": tags.monospace,
         "CodeInfo": tags.labelName, // TODO(2021-11-03) is this the right tag?
 
+
         // misc things
         "HorizontalRule": tags.contentSeparator,
         "Blockquote/...": tags.quote,
         "QuoteMark": tags.punctuation,
+        "Link": tags.link,
+        "LinkMark": tags.punctuation,
         "URL": tags.link,
       })]}
     ]),
