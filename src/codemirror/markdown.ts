@@ -1,22 +1,10 @@
 import * as md from "@lezer/markdown";
 import { Language, HighlightStyle, LanguageSupport, syntaxHighlighting, defineLanguageFacet, languageDataProp, syntaxTree } from "@codemirror/language"
-import { styleTags, tags, Tag } from "@lezer/highlight";
+import { styleTags, tags } from "@lezer/highlight";
 import { Extension } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import { IbisController } from "../App";
-import { FileWidget } from "../components/FileWidget"
 import { CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { FacadeExtern } from "../backend";
 import { shortdate, today } from "../util/calendar";
-
-// new tags
-const tx = {
-  refLink: Tag.define(tags.link),
-  urlLink: Tag.define(tags.link),
-
-  ulMark: Tag.define(tags.annotation),
-  olMark: Tag.define(tags.annotation),
-};
 
 // Internal Links -------------------------------------------------------------
 
@@ -25,44 +13,25 @@ const refLinkDelim: md.DelimiterType = { resolve: "RefLink", mark: "RefLinkMark"
 const RefLink: md.MarkdownExtension & Extension = {
   defineNodes: ["RefLink", "RefLinkMark"],
   parseInline: [{
-    name: "reflink",
+    name: "RefLink",
     before: "Link",
     parse(cx, next, pos) {
-      if(next == 91 /* [ */ && cx.char(pos + 1) == 91)
+      if(next == 91 /* [ */ && cx.char(pos + 1) == 91) {
         return cx.addDelimiter(refLinkDelim, pos, pos + 2, true, false);
-      if(next == 93 /* ] */ && cx.char(pos + 1) == 93)
+      }
+      if(next == 93 /* ] */ && cx.char(pos + 1) == 93) {
         return cx.addDelimiter(refLinkDelim, pos, pos + 2, false, true);
+      }
       return -1;
     }
   }],
   props: [
     styleTags({
       RefLinkMark: tags.squareBracket,
-      RefLink: tx.refLink,
-      URL: tx.urlLink,
+      RefLink: tags.link,
     }),
   ],
   extension: [
-    syntaxHighlighting(
-      HighlightStyle.define([
-        {tag: tx.refLink, class: "cm-ibis-link cm-ibix-reflink"},
-        {tag: tx.urlLink, class: "cm-ibis-link cm-ibix-urllink"},
-      ]),
-    ),
-    EditorView.domEventHandlers({
-      mousedown(e: MouseEvent, _view) {
-        if (!(e.target instanceof HTMLElement)) return;
-        const classes = e.target.classList;
-        if (classes.contains("cm-ibix-reflink")) {
-          IbisController.getSnapshot().open(new FileWidget(e.target.innerText.trim()))
-        } else if(classes.contains("cm-ibix-urllink")) {
-          window.open(e.target.innerText.replace(/^\s*<\s*|\s*>\s*$/g, ""), "_blank", "noopener,noreferrer");
-        } else {
-          return false;
-        }
-        return true;
-      }
-    })
   ],
 }
 
@@ -145,8 +114,8 @@ export default new LanguageSupport(
         "ATXHeading6/...": tags.heading6,
 
         // lists
-        "BulletList/ListIem/ListMark": tx.ulMark,
-        "OrderedList/ListIem/ListMark": tx.olMark,
+        //"BulletList/ListIem/ListMark": tx.ulMark,
+        //"OrderedList/ListIem/ListMark": tx.olMark,
         "ListItem/...": tags.list,
 
         // codeblocks
@@ -158,6 +127,7 @@ export default new LanguageSupport(
         "HorizontalRule": tags.contentSeparator,
         "Blockquote/...": tags.quote,
         "QuoteMark": tags.punctuation,
+        "URL": tags.link,
       })]}
     ]),
     languageData: {
@@ -182,6 +152,9 @@ export default new LanguageSupport(
         {tag: tags.heading2, fontSize: "1.4em"},
         {tag: tags.heading3, fontSize: "1.3em"},
         {tag: tags.heading, fontSize: "1.2em"},
+
+        // other
+        {tag: tags.link, color: "#7777ee", textDecoration: "underline", cursor: "pointer"},
       ]),
     )
   ],
