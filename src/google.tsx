@@ -1,5 +1,10 @@
-import { GDriveStore } from "./backend/store"
 import { IbisConfig, StoreType, loadConfig, saveConfig } from "./config"
+import { addScript, once } from "./util"
+
+const importGoogle = once(() => Promise.all([
+  addScript("https://apis.google.com/js/api.js"),
+  addScript("https://accounts.google.com/gsi/client"),
+]))
 
 // https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
 

@@ -31,3 +31,31 @@ export async function batched<T>(
 
   if (activeTask !== null) await (activeTask as Promise<void>)
 }
+
+export function tryCall<T>(fn: () => T): {value: T, error?: never} | {value?: never, error: any} {
+  try {
+    return {value: fn()}
+  } catch(e) {
+    return {error: e}
+  }
+}
+
+export function once<T>(fn: () => T): () => T {
+  let run = false
+  let value: T
+  return () => {
+    if (!run) value = fn()
+    return value
+  }
+}
+
+export function addScript(url: string) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script")
+    script.src = url
+    script.async = true
+    script.onload = resolve
+    script.onerror = reject
+    document.body.appendChild(script)
+  })
+}
