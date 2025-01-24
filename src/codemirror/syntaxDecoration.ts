@@ -46,11 +46,14 @@ export default function syntaxDecoration(spec: {
       onmousedown(ev: MouseEvent, view: EditorView) {
         const pos = view.posAtDOM(ev.target as HTMLElement)
         if (pos === null) return
+        let preventDefault = false
         this.decorations.between(pos, pos, (from, to, value) => {
           if (value.spec.onmousedown) {
             value.spec.onmousedown(from, to)
+            preventDefault = true
           }
         })
+        return preventDefault
       }
     }, {
       decorations: v => v.decorations,
