@@ -1,7 +1,7 @@
 # ibis-wiki
 
 A scrappy little personal wiki, built to fit a personal niche.
-See <https://ralismark.xyz/ibis-wiki/> for the production (i.e. latest commit) version, or run locally with `npm i` + `npm run dev`.
+See <https://ibis.kwellig.garden> for the production (i.e. latest commit) version, or run locally with `npm i` + `npm run dev`.
 
 This is inspired by the likes of [TiddlyWiki](https://tiddlywiki.com/) and [Logseq](https://logseq.com/), designed from the ground up to address some of my gripes with them.
 It's not really designed with public use in mind (**if you do want to use this, let me know!**), but definitely feel free to play around with it!
