@@ -1,3 +1,4 @@
+import "./FileWidget.css"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
 import { useExtern, useExternOr } from "../extern"
@@ -10,6 +11,8 @@ export class FileWidget implements IWidget {
   constructor(path: string) {
     this.path = path
   }
+
+  className(): string { return "FileWidget" }
 
   show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
     const facade = useExtern(FacadeExtern)

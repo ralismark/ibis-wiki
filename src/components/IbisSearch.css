@@ -3,6 +3,10 @@
 
   flex-grow: 1;
 
+  &:not(:focus-within) > .IbisSearch__if {
+    display: none;
+  }
+
   > input {
     width: 100%;
     margin: 0;

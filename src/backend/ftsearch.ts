@@ -18,9 +18,10 @@ type FtsRow = {
 }
 
 export interface IFullTextSearch {
-  handleSummaryChanged(ev: SummaryChanged): any,
-  search(query: string): Promise<string[]>,
-  backlinks(path: string): Promise<string[]>,
+  handleSummaryChanged(ev: SummaryChanged): any
+  search(query: string): Promise<string[]>
+  backlinks(path: string): Promise<string[]>
+  all(each: (row: FtsRow) => void): Promise<void>
 }
 
 export class FullTextSearch {
@@ -192,56 +193,75 @@ export class FullTextSearch {
     } else assertUnreachable(ev)
   }
 
-  search(query: string): Promise<string[]> {
-    // intentionally using a promise here instead of plain async, to get a
-    // resolve function instead of having to return
+  private marchCursors(cursorReqs: IDBRequest<IDBCursorWithValue | null>[], each: (row: FtsRow) => void): Promise<void> {
+    // IndexedDB api is gnarly so we need resolve function to complete the
+    // promise
     return new Promise(async resolve => {
-      const terms = (await tokenise)(query)
-      const out: string[] = []
-      if (terms.length === 0) {
-        resolve(out)
-        return
+      if (cursorReqs.length === 0) return resolve()
+
+      // we implement a "barrier" a la https://en.cppreference.com/w/cpp/thread/barrier.html
+      // in order to essentially Promise.all on cursors advancing
+
+      let outstanding = 0 // number of cursor continues we're waiting to resolve
+
+      for (const r of cursorReqs) {
+        ++outstanding // for initial advance
+        r.onsuccess = () => {
+          if (--outstanding === 0) barrier()
+        }
       }
 
-      await this.tr("fts", "readonly", tr => {
-        const index = tr.objectStore("fts").index("terms")
-        let outstanding = 0
-        const reqs = terms.map(term => {
-          const r = index.openCursor(term)
-          ++outstanding
-          r.onsuccess = () => {
-            if (--outstanding === 0) barrier()
-          }
-          return r
-        })
-
-        function barrier() {
-          const cursors = reqs.map(r => r.result)
-          if (cursors.includes(null)) {
-            resolve(out)
-            return
-          }
-
-          let min: string = cursors[0]!.value.path
-          for (const c of cursors) {
-            if (indexedDB.cmp(c!.value.path, min) < 0) {
-              min = c!.value.path
-            }
-          }
-
-          let allMin = true
-          for (const c of cursors) {
-            if (c!.value.path === min) {
-              ++outstanding
-              c!.continue()
-            } else {
-              allMin = false
-            }
-          }
-
-          if (allMin) out.push(min)
+      // handle each "step" of cursors
+      function barrier() {
+        const cursors = cursorReqs.map(r => r.result)
+        if (cursors.includes(null)) {
+          // a cursor has reached the end, so there won't be any more results
+          resolve()
+          return
         }
-      })
+
+        const getKey = (c: IDBCursorWithValue | null) => c!.value.path
+
+        // get min cursor key via reduce
+        let minKey: string = getKey(cursors[0])
+        for (const c of cursors) {
+          if (indexedDB.cmp(getKey(c), minKey) < 0) minKey = getKey(c)
+        }
+
+        // advance all cursors pointing to min value
+        let advancedAll = true
+        for (const c of cursors) {
+          if (getKey(c) === minKey) {
+            ++outstanding
+            c!.continue()
+          } else {
+            advancedAll = false
+          }
+        }
+
+        // if we advanced all cursors, this means that all the cursors pointed
+        // to the same FtsRow (and thus was part of all filters) -- emit it
+        if (advancedAll) each(cursors[0]!.value)
+      }
+    })
+  }
+
+  async search(query: string): Promise<string[]> {
+    const terms = (await tokenise)(query)
+    if (terms.length === 0) {
+      return []
+    }
+
+    return await this.tr("fts", "readonly", async tr => {
+      const matchedPaths: string[] = []
+
+      const index = tr.objectStore("fts").index("terms")
+      await this.marchCursors(
+        terms.map(term => index.openCursor(term)),
+        row => matchedPaths.push(row.path),
+      )
+
+      return matchedPaths
     })
   }
 
@@ -254,6 +274,15 @@ export class FullTextSearch {
       return rows.map((r: FtsRow) => r.path)
     })
   }
+
+  async all(each: (row: FtsRow) => void): Promise<void> {
+    await this.tr("fts", "readonly", async tr => {
+      await this.marchCursors(
+        [tr.objectStore("fts").openCursor()],
+        each,
+      )
+    })
+  }
 }
 
 export const DummyFullTextSearch: IFullTextSearch = {
@@ -264,5 +293,8 @@ export const DummyFullTextSearch: IFullTextSearch = {
   },
   async backlinks(path: string): Promise<string[]> {
     return []
-  }
+  },
+  async all(each: (row: FtsRow) => void): Promise<void> {
+    return
+  },
 }

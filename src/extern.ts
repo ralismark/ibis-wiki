@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { DependencyList, useEffect, useState, useSyncExternalStore } from "react";
 
 export interface Extern<T> {
   subscribe(onStoreChange: () => void): () => void,
@@ -25,6 +25,16 @@ export function useAsync<T>(promise: Promise<T>, fallback: T): T {
     promise.then(setVal);
   }, [promise]);
   return val;
+}
+
+export function useEffectAsync(effect: (cleanup: Promise<void>) => Promise<void>, deps?: DependencyList): void {
+  useEffect(() => {
+    let cleanup
+    effect(new Promise(resolve => {
+      cleanup = resolve
+    }))
+    return cleanup
+  }, deps)
 }
 
 // ----------------------------------------------------------------------------

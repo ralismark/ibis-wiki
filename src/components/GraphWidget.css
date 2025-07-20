@@ -1,0 +1,20 @@
+.GraphWidget {
+  width: fit-content;
+
+  .GraphWidget__wrapper {
+    resize: both;
+    overflow: auto;
+    padding-bottom: 1rem;
+    width: var(--content-width);
+    height: 50vh;
+
+    > svg {
+      width: 100%;
+      height: 100%;
+
+      text {
+        cursor: pointer;
+      }
+    }
+  }
+}

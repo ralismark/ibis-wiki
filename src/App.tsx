@@ -1,14 +1,13 @@
 import "./App.css"
 import "react-toastify/dist/ReactToastify.css";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Config, IbisConfig, loadConfig } from "./config";
+import { IbisConfig, loadConfig } from "./config";
 import { Facade, FacadeExtern } from "./backend";
-import { ExternState, useExtern, useExternOr } from "./extern";
-import { dateWeek, dateWeekYear, shortdate, today } from "./util/calendar";
+import { ExternState, useExtern } from "./extern";
 import { LsWal, QUERY_PARAM_WIDGETS } from "./globals";
 import { ToastContainer, toast } from "react-toastify";
 import { NumDirty, NumSyncing } from "./backend/file";
-import { SiteControl, DummySiteControl, Widget, WidgetControl, widgetToString, widgetTypename, stringToWidget } from "./components/Widget";
+import { SiteControl, DummySiteControl, Widget, WidgetControl, widgetToRepr, reprToWidget } from "./components/Widget";
 import { FileWidget, TodayWidget } from "./components/FileWidget";
 import { ConfigWidget } from "./components/ConfigWidget";
 import { CalendarWidget } from "./components/CalendarWidget";
@@ -39,7 +38,7 @@ function initialWidgets() {
     const prevWidgets = params.get(QUERY_PARAM_WIDGETS)
     if (prevWidgets !== null) {
       try {
-        return JSON.parse(prevWidgets).map(stringToWidget)
+        return JSON.parse(prevWidgets).map(reprToWidget)
       } catch(e) {
         toast.error(`Couldn't restore open widgets: ${e}`)
       }
@@ -78,7 +77,7 @@ function WidgetCard(props: { widget: Widget, ctl: WidgetControl, focusHook: any 
   }, [elem, props.focusHook])
 
   return <article
-    className={"WidgetCard " + widgetTypename(props.widget)}
+    className={"WidgetCard " + props.widget.className()}
     ref={elem}
   >
     <h1>
@@ -103,6 +102,26 @@ function CardsRow(props: { cards: JSX.Element[] }) {
 export function App() {
   const [config, setConfig] = useState<IbisConfig>(loadConfig)
 
+  // keyboard shortcuts
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      let shortcut = event.key
+      // order is ctrl alt shift
+      if (event.shiftKey) shortcut = "Shift+" + shortcut
+      if (event.altKey) shortcut = "Alt+" + shortcut
+      if (event.ctrlKey) shortcut = "Control+" + shortcut
+      if (event.ctrlKey || event.shiftKey) {
+        const target = document.querySelector(`[aria-keyshortcuts~="${shortcut}"]`)
+        if (target instanceof HTMLElement) {
+          target.focus()
+          event.preventDefault()
+        }
+      }
+    }
+    window.addEventListener("keydown", listener)
+    return () => window.removeEventListener("keydown", listener)
+  })
+
   // TODO React's strict mode causes us to create a duplicate backend, which
   // might cause bad behaviour when dealing with unsaved changes
   const facade: Facade = useMemo(() => new Facade(config), [config]);
@@ -114,7 +133,7 @@ export function App() {
   const [widgets, setWidgets] = useState<Widget[]>(initialWidgets())
   useEffect(() => {
     // set query param so we can reopen
-    const serialised = JSON.stringify(widgets.map(widgetToString))
+    const serialised = JSON.stringify(widgets.map(widgetToRepr))
 
     const url = new URL(location.href)
     url.searchParams.set(QUERY_PARAM_WIDGETS, serialised)
@@ -135,7 +154,7 @@ export function App() {
   }
 
   function openWidget(newWidget: Widget, atStart: boolean) {
-    const existing = widgets.find(w => widgetToString(w) === widgetToString(newWidget))
+    const existing = widgets.find(w => widgetToRepr(w) === widgetToRepr(newWidget))
     if (existing) {
       focuses.current.set(existing, Symbol())
       forceUpdate()
@@ -159,18 +178,6 @@ export function App() {
       </div>
       <div className="mid">
         <IbisSearch ctl={ctl} facade={facade} />
-        <button
-          title="Today"
-          onClick={() => openWidget(new TodayWidget(), false)}
-        >☀️</button>
-        <button
-          title="Calendar"
-          onClick={() => openWidget(new CalendarWidget(), true)}
-        >🗓️</button>
-        <button
-          title="Config"
-          onClick={() => openWidget(new ConfigWidget(), false)}
-        >🔧</button>
       </div>
       <div className="right">
         <SyncIndicator />
@@ -179,7 +186,7 @@ export function App() {
 
     <CardsRow
       cards={widgets.map((widget, i) => <WidgetCard
-        key={widgetToString(widget)}
+        key={widgetToRepr(widget)}
         widget={widget}
         focusHook={focusOf(widget)}
         ctl={{
