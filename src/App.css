@@ -101,14 +101,13 @@ header {
   }
 
   > * {
+    /* in order to have each one scroll independently */
     flex-shrink: 0;
     width: fit-content;
 
     height: fit-content;
     max-height: 100%;
     overflow-y: auto;
-
-    padding-bottom: 50vh;
   }
 }
 

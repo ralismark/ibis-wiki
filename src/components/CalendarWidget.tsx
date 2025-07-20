@@ -7,6 +7,8 @@ import { dateRange, shortdate, today } from "../util/calendar"
 import { FileWidget } from "./FileWidget"
 
 export class CalendarWidget implements IWidget {
+  className(): string { return "CalendarWidget" }
+
   show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
     const facade = useExtern(FacadeExtern)
     const listing = useExternOr(facade?.listing, new Set())

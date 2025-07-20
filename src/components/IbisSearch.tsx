@@ -3,13 +3,16 @@ import { useEffect, useId, useMemo, useRef, useState, Fragment } from "react"
 import { Facade, FacadeExtern } from "../backend"
 import { IbisController } from "../App"
 import { useExtern } from "../extern"
-import { FileWidget } from "./FileWidget"
+import { FileWidget, TodayWidget } from "./FileWidget"
 import { SiteControl } from "./Widget"
+import { CalendarWidget } from "./CalendarWidget"
+import { ConfigWidget } from "./ConfigWidget"
+import { GraphWidget } from "./GraphWidget"
 
 type Suggestion = {
   key: string
   content: JSX.Element,
-  fn: () => void,
+  activate: () => void,
 }
 
 // only using this to scroll the option into view when selected
@@ -37,19 +40,26 @@ function getSuggestions(
   query: string,
   ctl: SiteControl,
   facade: Facade,
-): [string, JSX.Element, Suggestion[]][] {
-  const out: [string, JSX.Element, Suggestion[]][] = []
+): [string, (inner: any) => JSX.Element, Suggestion[]][] {
+  const out: [string, (inner: any) => JSX.Element, Suggestion[]][] = []
+
+  const resultsContainer = (name: string) => (children: any) => <>
+    <p className="search-section">{name}</p>
+    <ul role="group">
+      {children}
+    </ul>
+  </>
 
   // general entries
   if (query !== "") {
     out.push([
       "top",
-      <></>,
+      x => <ul role="group">{x}</ul>,
       [
         {
-          key: "", // empty string to auto-select by default
+          key: "general/open",
           content: <>Open note "{query}"</>,
-          fn: () => ctl.open(new FileWidget(query)),
+          activate: () => ctl.open(new FileWidget(query)),
         }
       ],
     ])
@@ -69,12 +79,12 @@ function getSuggestions(
         .map(path => ({
           key: "card-title/" + path,
           content: <>{path}</>,
-          fn: () => ctl.open(new FileWidget(path)),
+          activate: () => ctl.open(new FileWidget(path)),
         }))
   }, [ctl, facade, query])
   out.push([
     "card-title",
-    <p className="search-section">Title matches:</p>,
+    resultsContainer("Title matches:"),
     listingSugs,
   ])
 
@@ -85,15 +95,42 @@ function getSuggestions(
       setSearchSugs(results.map(path => ({
         key: "search/" + path,
         content: <>{path}</>,
-        fn: () => ctl.open(new FileWidget(path)),
+        activate: () => ctl.open(new FileWidget(path)),
       })))
     })
   }, [ctl, facade, query])
-
   out.push([
     "search",
-    <p className="search-section">Content matches:</p>,
+    resultsContainer("Content matches:"),
     searchSugs,
+  ])
+
+  // special cards
+  out.push([
+    "special",
+    x => <menu>{x}</menu>,
+    [
+      {
+        key: "special/today",
+        content: <>☀️ Today</>,
+        activate: () => ctl.open(new TodayWidget()),
+      },
+      {
+        key: "special/calendar",
+        content: <>🗓️ Calendar</>,
+        activate: () => ctl.open(new CalendarWidget()),
+      },
+      {
+        key: "special/graph",
+        content: <>🗺️ Graph</>,
+        activate: () => ctl.open(new GraphWidget()),
+      },
+      {
+        key: "special/config",
+        content: <>🔧 Config</>,
+        activate: () => ctl.open(new ConfigWidget()),
+      },
+    ]
   ])
 
   return out
@@ -115,17 +152,18 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
 
   const getNextPrev = (): [string, string] => {
     const idx = allSugs.findIndex(({key}) => key === selected)
-    if (idx === -1) return ["", ""]
+    const first = allSugs[0]?.key || ""
+    if (idx === -1) return [first, first]
     return [
-      allSugs[idx-1]?.key || allSugs[allSugs.length - 1]?.key || "",
-      allSugs[idx+1]?.key || "",
+      allSugs[idx-1]?.key || allSugs[allSugs.length - 1]?.key || first,
+      allSugs[idx+1]?.key || first,
     ]
   }
 
   const acceptSelected = () => {
     const match = allSugs.find(({key}) => key === selected)
     if (match) {
-      match.fn()
+      match.activate()
       setQuery("")
     }
   }
@@ -144,9 +182,13 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
         if (e.code === "Escape") {
           setQuery("")
           e.currentTarget.blur()
-        } else if (e.code === "ArrowUp") setSelected(getNextPrev()[0])
-        else if (e.code === "ArrowDown") setSelected(getNextPrev()[1])
-        else if (e.code === "Enter") acceptSelected()
+        } else if (e.code === "ArrowUp") {
+          e.preventDefault()
+          setSelected(getNextPrev()[0])
+        } else if (e.code === "ArrowDown") {
+          e.preventDefault()
+          setSelected(getNextPrev()[1])
+        } else if (e.code === "Enter") acceptSelected()
         //else console.log(e.code)
       }}
       autoComplete="off"
@@ -155,42 +197,39 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
       aria-label="Search"
       aria-expanded={query !== ""}
       aria-controls={resultsId}
+      aria-keyshortcuts="Control+k"
     />
 
-    {query && <>
-      <div
-        className="results"
-        id={resultsId}
-        role="listbox"
-        aria-activedescendant={activeId}
-      >
-        {contents.map(([key, header, sugs]) => sugs.length > 0 && <Fragment key={key}>
-          {header}
-          <ul role="group">
-            {sugs.map(s => <Option
-              key={s.key}
-              suggestion={s}
-              selected={s.key === selected}
+    <div
+      className="results IbisSearch__if"
+      id={resultsId}
+      role="listbox"
+      aria-activedescendant={activeId}
+    >
+      {contents.map(([key, wrapper, sugs]) => sugs.length > 0 && <Fragment key={key}>
+        {wrapper(sugs.map(s => <Option
+          key={s.key}
+          suggestion={s}
+          selected={s.key === selected}
 
-              role="option"
-              onClick={e => {
-                e.preventDefault()
-                s.fn()
-                setQuery("")
-              }}
-              onMouseOver={() => setSelected(s.key)}
-              aria-selected={s.key === selected}
-              id={s.key === selected ? activeId : undefined}
-            />)}
-          </ul>
-        </Fragment>)}
-      </div>
+          role="option"
+          tabIndex={0}
+          onClick={e => {
+            e.preventDefault()
+            s.activate()
+            setQuery("")
+          }}
+          onFocus={() => setSelected(s.key)}
+          onMouseOver={() => setSelected(s.key)}
+          aria-selected={s.key === selected}
+          id={s.key === selected ? activeId : undefined}
+        />))}
+      </Fragment>)}
+    </div>
 
-      <div
-        className="absorb-input"
-        role="none"
-        onClick={() => setQuery("")}
-      />
-    </>}
+    <div
+      className="absorb-input IbisSearch__if"
+      role="none"
+    />
   </search>
 }
