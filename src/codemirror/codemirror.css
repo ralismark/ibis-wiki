@@ -27,11 +27,7 @@
 	padding-bottom: 0.2em;
 
 	&:has(.cm-tag-contentseparator) {
-		background: linear-gradient(
-			transparent 0%,
-			color-mix(in srgb, var(--filled-bg), transparent 50%) 50%,
-			transparent 100%
-		);
+		background: color-mix(in srgb, var(--secondary), transparent 90%);
 		line-height: 5em;
 		text-align: center;
 	}
@@ -52,11 +48,7 @@
 	&:has(.cm-tag-h1, .cm-tag-h2, .cm-tag-h3, .cm-tag-h4) {
 		color: var(--secondary);
 
-		background: linear-gradient(
-			transparent 0%,
-			color-mix(in srgb, var(--filled-bg), transparent 80%) 50%,
-			transparent 100%
-		);
+		background: color-mix(in srgb, var(--secondary), transparent 90%);
 	}
 }
 
