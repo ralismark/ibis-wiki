@@ -30,6 +30,11 @@ export default defineConfig({
 					},
 				],
 			},
+			workbox: {
+				// I don't want build to fail because code chunks are too big -- the
+				// stemming library we have can get pretty big...
+				maximumFileSizeToCacheInBytes: 100_000_000,
+			},
 		}),
 	],
 
