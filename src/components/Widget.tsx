@@ -20,8 +20,33 @@ export interface WidgetControl extends SiteControl {
 }
 
 export interface IWidget {
-  className(): string
-  show(ctl: WidgetControl): [JSX.Element, JSX.Element]
+  show(ctl: WidgetControl): WidgetContent
+}
+
+export class WidgetContent {
+  className: string
+  title: string = ""
+  controls: Array<[string, () => void]> = []
+  body: JSX.Element = <></>
+
+  constructor(className: string) {
+    this.className = className
+  }
+
+  withTitle(title: string): this {
+    this.title = title
+    return this
+  }
+
+  withControl(label: string, fn: () => void): this {
+    this.controls.push([label, fn])
+    return this
+  }
+
+  withBody(body: JSX.Element): this {
+    this.body = body
+    return this
+  }
 }
 
 export type Widget =

@@ -1,13 +1,13 @@
 import "./IbisSearch.css"
 import { useEffect, useId, useMemo, useRef, useState, Fragment } from "react"
-import { Facade, FacadeExtern } from "../backend"
-import { IbisController } from "../App"
-import { useExtern } from "../extern"
+import { Facade } from "../backend"
 import { FileWidget, TodayWidget } from "./FileWidget"
 import { SiteControl } from "./Widget"
 import { CalendarWidget } from "./CalendarWidget"
 import { ConfigWidget } from "./ConfigWidget"
 import { GraphWidget } from "./GraphWidget"
+import { NumDirty, NumSyncing } from "../backend/file"
+import { useExtern } from "../extern"
 
 type Suggestion = {
   key: string
@@ -173,63 +173,89 @@ export function IbisSearch(props: { ctl: SiteControl, facade: Facade }) {
   const resultsId = useId()
   const activeId = useId()
 
-  return <search className="ibis-search">
-    <input
-      type="search"
-      value={queryOrig}
-      onChange={e => setQuery(e.target.value)}
-      onKeyDown={e => {
-        if (e.code === "Escape") {
-          setQuery("")
-          e.currentTarget.blur()
-        } else if (e.code === "ArrowUp") {
-          e.preventDefault()
-          setSelected(getNextPrev()[0])
-        } else if (e.code === "ArrowDown") {
-          e.preventDefault()
-          setSelected(getNextPrev()[1])
-        } else if (e.code === "Enter") acceptSelected()
-        //else console.log(e.code)
-      }}
-      autoComplete="off"
-      placeholder="Search"
-      role="combobox"
-      aria-label="Search"
-      aria-expanded={query !== ""}
-      aria-controls={resultsId}
-      aria-keyshortcuts="Control+k"
-    />
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
+  const dirty = useExtern(NumDirty)
+  const syncing = useExtern(NumSyncing)
+
+  return <>
     <div
-      className="results IbisSearch__if"
-      id={resultsId}
-      role="listbox"
-      aria-activedescendant={activeId}
+      className="PaletteButton"
+      data-dirty={dirty}
+      data-syncing={syncing}
+      title={`${dirty} dirty ${syncing} syncing`}
     >
-      {contents.map(([key, wrapper, sugs]) => sugs.length > 0 && <Fragment key={key}>
-        {wrapper(sugs.map(s => <Option
-          key={s.key}
-          suggestion={s}
-          selected={s.key === selected}
-
-          role="option"
-          tabIndex={0}
-          onClick={e => {
-            e.preventDefault()
-            s.activate()
-            setQuery("")
-          }}
-          onFocus={() => setSelected(s.key)}
-          onMouseOver={() => setSelected(s.key)}
-          aria-selected={s.key === selected}
-          id={s.key === selected ? activeId : undefined}
-        />))}
-      </Fragment>)}
+      <button
+        onClick={() => dialogRef.current?.showModal()}
+        aria-keyshortcuts="Control+k"
+      >
+        C-K
+      </button>
     </div>
 
-    <div
-      className="absorb-input IbisSearch__if"
-      role="none"
-    />
-  </search>
+    <dialog
+      ref={dialogRef}
+      className="Palette"
+      onMouseDown={e => {
+        // ugh... closedby="any" isn't baseline
+        if (e.target === e.currentTarget) {
+          e.stopPropagation();
+          e.currentTarget.close();
+        }
+      }}
+      onClose={() => setQuery("")}
+    >
+      <input
+        type="search"
+        value={queryOrig}
+        onChange={e => setQuery(e.target.value)}
+
+        onKeyDown={e => {
+          if (e.key === "Escape") {
+            setQuery("")
+            e.currentTarget.blur()
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault()
+            setSelected(getNextPrev()[0])
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault()
+            setSelected(getNextPrev()[1])
+          } else if (e.key === "Enter") acceptSelected()
+          //else console.log(e.code)
+        }}
+
+        placeholder="Search"
+        role="combobox"
+        aria-label="Search"
+        aria-expanded={query !== ""}
+        aria-controls={resultsId}
+      />
+
+      <div
+        id={resultsId}
+        role="listbox"
+        aria-activedescendant={activeId}
+      >
+        {contents.map(([key, wrapper, sugs]) => sugs.length > 0 && <Fragment key={key}>
+          {wrapper(sugs.map(s => <Option
+            key={s.key}
+            suggestion={s}
+            selected={s.key === selected}
+
+            role="option"
+            tabIndex={0}
+            onClick={e => {
+              e.preventDefault()
+              s.activate()
+              setQuery("")
+            }}
+            onFocus={() => setSelected(s.key)}
+            onMouseOver={() => setSelected(s.key)}
+            aria-selected={s.key === selected}
+            id={s.key === selected ? activeId : undefined}
+          />))}
+        </Fragment>)}
+      </div>
+    </dialog>
+  </>
 }

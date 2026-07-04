@@ -1,96 +1,92 @@
-@import "https://kwellig.garden/assets/foundation.css";
+/* Foundation -------------------------------------------------------------- */
 
-/* Global ------------------------------------------------------------------ */
+html {
+  /* based on <https://github.com/system-fonts/modern-font-stacks> */
+  --main-font-family: Merriweather, "Iowan Old Style", "Palatino Linotype", "URW Palladio L", "P052", serif;
+  --mono-font-family: Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
+  --hand-font-family: cursive, sans-serif;
 
-pre {
-  margin-top: 0;
-  margin-bottom: 0;
+  /* text */
+  --body-fg: light-dark(black, #e7e6e5);
+  --body-bg: light-dark(white, #191a1a);
+
+  /* ui lines */
+  --stroke: rgba(127.5, 127.5, 127.5, 0.4);
+
+  /* background of boxes/etc */
+  --box-tint: color-mix(in srgb, var(--primary), var(--body-bg) 95%);
+  --button-tint: color-mix(in srgb, var(--primary), var(--body-bg) 80%);
+
+  /* filled in UI elements */
+  --filled-fg: white;
+  --filled-bg: #990461;
+
+  /* text colours */
+  --primary: #DB5599;
+  --secondary: #A747FF;
+  --tertiary: #939C28;
+
+  /* colour of links */
+  --linking: light-dark(#094EBA, #4890FF);
+
+  --content-width: min(50rem, 90vw);
 }
+
+html {
+  color-scheme: dark;
+  @media (prefers-color-scheme: light) { color-scheme: light; }
+  @media (prefers-color-scheme: dark) { color-scheme: dark; }
+  @media print { color-scheme: light; }
+}
+
+/* reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, div {
+  margin: 0;
+  padding: 0;
+}
+
+/* typography */
+html {
+  color: var(--body-fg);
+  background-color: var(--body-bg);
+  font-family: var(--main-font-family);
+  text-align: left;
+
+  line-height: 1.9;
+
+  tab-size: 4;
+}
+
+pre, code {
+  font-family: var(--mono-font-family);
+}
+
+
+textarea, select, input, button, a[role=button] {
+  color: inherit;
+  font: inherit;
+}
+
 
 /* Top-level App ----------------------------------------------------------- */
-
-:root {
-  --navbar-height: 2rem;
-}
 
 html, body, main {
   height: 100vh;
 }
 
-header {
-  color: white;
-
-  position: fixed;
-  top: 0;
-  width: 100%;
-  background-color: #402634;
-  z-index: 100;
-
-  height: var(--navbar-height);
-  max-height: var(--navbar-height);
-
-  display: flex;
-  align-items: stretch;
-
-  gap: 1rem;
-  padding: 0 0.5rem;
-
-  > * {
-    display: flex;
-    align-items: center;
-
-    gap: 0.5rem;
-
-    &.left, &.right {
-      flex-basis: 0;
-      flex-grow: 1;
-    }
-
-    &.left {
-      justify-content: flex-start;
-    }
-    &.mid {
-      justify-content: center;
-      width: var(--content-width);
-    }
-    &.right {
-      justify-content: flex-end;
-    }
-  }
-
-  > * > button {
-    margin: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
-  /* header elements */
-
-  .dirty {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-
-    align-self: center;
-
-    border: 2px solid var(--stroke);
-
-    &[aria-checked=true] {
-      background: var(--secondary);
-    }
-  }
-}
-
 .Cards {
   height: 100%;
-  padding-top: var(--navbar-height);
 }
 
 .CardsRow {
   display: flex;
   flex-direction: row;
   overflow-x: scroll;
-  gap: 0.5rem;
+  gap: 2rem;
 
   &::before, &::after {
     content: "";
@@ -111,12 +107,10 @@ header {
   }
 }
 
+/* Cards ------------------------------------------------------------------- */
+
 .WidgetCard {
   width: var(--content-width); /* default */
-
-  border: 1px solid rgba(127, 127, 127, 0.4);
-  border-radius: 4px;
-  margin: 0.5rem auto;
 
   > h1, > h2, > section {
     &:not(:last-child) {

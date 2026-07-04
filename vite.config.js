@@ -11,6 +11,7 @@ export default defineConfig({
   server: {
     port: 80,
   },
+  root: path.resolve(__dirname, "src"),
   plugins: [
     react(),
     checker({

@@ -2,7 +2,7 @@ import "./FileWidget.css"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
 import { useExtern, useExternOr } from "../extern"
-import { WidgetControl, IWidget } from "./Widget"
+import { WidgetControl, IWidget, WidgetContent } from "./Widget"
 import { shortdate, today } from "../util/calendar"
 
 export class FileWidget implements IWidget {
@@ -12,9 +12,7 @@ export class FileWidget implements IWidget {
     this.path = path
   }
 
-  className(): string { return "FileWidget" }
-
-  show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
+  show(ctl: WidgetControl): WidgetContent {
     const facade = useExtern(FacadeExtern)
     const [file, setFile] = useState<File | null>(null)
 
@@ -68,31 +66,31 @@ export class FileWidget implements IWidget {
       ["backlinks", backlinks],
     ]
 
-    return [
-      <>{this.path}</>,
-      <>
-        {conflicting && <>
-          <button
-            onClick={() => file!.resolveConflict()}
-          >Finish Merging</button>
-        </>}
+    return new WidgetContent("FileWidget")
+      .withTitle(this.path)
+      .withBody(
+        <>
+          {conflicting && <>
+            <button
+              onClick={() => file!.resolveConflict()}
+            >Finish Merging</button>
+          </>}
 
-        <section ref={ref}>
-          {!file && "loading..."}
-        </section>
+          <section ref={ref}>
+            {!file && "loading..."}
+          </section>
 
-        <ul>
-          {bottomMeta.map(([key, items]) => items.length > 0 && <li key={key}>
-            {key} ({items.length}):{" "}
-            {items.map(p => <button
-              key={p}
-              onClick={() => ctl.open(new FileWidget(p))}
-            >{p}</button>)}
-          </li>)}
-        </ul>
-
-      </>,
-    ]
+          <ul>
+            {bottomMeta.map(([key, items]) => items.length > 0 && <li key={key}>
+              {key} ({items.length}):{" "}
+              {items.map(p => <button
+                key={p}
+                onClick={() => ctl.open(new FileWidget(p))}
+              >{p}</button>)}
+            </li>)}
+          </ul>
+        </>,
+      )
   }
 }
 
@@ -101,11 +99,8 @@ export class TodayWidget extends FileWidget {
     super(shortdate(today))
   }
 
-  show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
-    const [, body] = super.show(ctl)
-    return [
-      <>Today: {this.path}</>,
-      body,
-    ]
+  show(ctl: WidgetControl): WidgetContent {
+    return super.show(ctl)
+      .withTitle("Today: " + this.path)
   }
 }

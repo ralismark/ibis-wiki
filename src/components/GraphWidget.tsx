@@ -1,6 +1,6 @@
 import "./GraphWidget.css"
-import { useEffect, useRef, useState } from "react"
-import { WidgetControl, IWidget } from "./Widget"
+import { useRef, useState } from "react"
+import { WidgetControl, IWidget, WidgetContent } from "./Widget"
 import * as d3 from "d3"
 import { useEffectAsync, useExtern } from "../extern"
 import { FacadeExtern } from "../backend"
@@ -14,9 +14,7 @@ function group(path: string) {
 }
 
 export class GraphWidget implements IWidget {
-  className(): string { return "GraphWidget" }
-
-  show(ctl: WidgetControl): [JSX.Element, JSX.Element] {
+  show(ctl: WidgetControl): WidgetContent {
     const ref = useRef<SVGSVGElement>(null)
     const facade = useExtern(FacadeExtern)
 
@@ -167,33 +165,34 @@ export class GraphWidget implements IWidget {
       svg.selectAll("*").remove()
     }, [ref, facade, hideDiaryDays])
 
-    return [
-      <>~ Graph ~</>,
-      <>
-        <label>
-          <input
-            type="checkbox"
-            checked={hideDiaryDays}
-            onChange={e => setHideDiaryDays(e.target.checked)}
-          />
+    return new WidgetContent("GraphWidget")
+      .withTitle("~ Graph ~")
+      .withBody(
+        <>
+          <label>
+            <input
+              type="checkbox"
+              checked={hideDiaryDays}
+              onChange={e => setHideDiaryDays(e.target.checked)}
+            />
 
-          Hide diary entries
-        </label>
+            Hide diary entries
+          </label>
 
-        <div className={`${this.className()}__wrapper`}>
-          <svg ref={ref}>
-            <defs>
-              <filter x="0" y="0" width="1" height="1" id="textbg">
-                <feFlood floodColor="#00000088" result="bg" />
-                <feMerge>
-                  <feMergeNode in="bg"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-          </svg>
-        </div>
-      </>
-    ]
+          <div className={`GraphWidget__wrapper`}>
+            <svg ref={ref}>
+              <defs>
+                <filter x="0" y="0" width="1" height="1" id="textbg">
+                  <feFlood floodColor="#00000088" result="bg" />
+                  <feMerge>
+                    <feMergeNode in="bg"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
+            </svg>
+          </div>
+        </>
+      )
   }
 }

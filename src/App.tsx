@@ -17,20 +17,6 @@ import { IbisSearch } from "./components/IbisSearch";
 // widgets, which aren't managed within react.
 export const IbisController = new ExternState<SiteControl>(DummySiteControl)
 
-function SyncIndicator() {
-  // TODO aria for syncing icon
-  const dirty = useExtern(NumDirty)
-  const syncing = useExtern(NumSyncing)
-  return <div
-    className="dirty"
-    data-dirty={dirty}
-    data-syncing={syncing}
-    title={`${dirty} dirty ${syncing} syncing`}
-    aria-label="Dirty"
-    aria-checked={dirty > 0}
-  />
-}
-
 function initialWidgets() {
   const widgets: Widget[] = (() => {
     // try load from query parameter
@@ -64,8 +50,8 @@ function initialWidgets() {
 function WidgetCard(props: { widget: Widget, ctl: WidgetControl, focusHook: any }) {
   // TODO widgets might only need SiteControl and not WidgetControl, if all the
   // widget controls are only used here
-  const [title, body] = props.widget.show(props.ctl)
-  const elem = useRef<HTMLElement | null>(null)
+  const contents = props.widget.show(props.ctl)
+  const elem = useRef<HTMLElement>(null)
 
   useEffect(() => {
     elem.current?.scrollIntoView({
@@ -76,18 +62,20 @@ function WidgetCard(props: { widget: Widget, ctl: WidgetControl, focusHook: any 
     (document.activeElement as HTMLElement | undefined)?.blur()
   }, [elem, props.focusHook])
 
+  contents.controls.unshift(["×", () => props.ctl.closeSelf()])
+
   return <article
-    className={"WidgetCard " + props.widget.className()}
+    className={"WidgetCard " + contents.className}
     ref={elem}
   >
-    <h1>
-      {//this first so it floats right of title floats
-      }
-      <button onClick={e => { props.ctl.closeSelf() }}>×</button>
-      {title}
-    </h1>
+    <h1>{contents.title}</h1>
+    <menu>
+      {contents.controls.map(([label, fn], idx) => <li key={idx}>
+        <button onClick={fn}>{label}</button>
+      </li>)}
+    </menu>
 
-    {body}
+    {contents.body}
   </article>
 }
 
@@ -112,7 +100,10 @@ export function App() {
       if (event.ctrlKey) shortcut = "Control+" + shortcut
       if (event.ctrlKey || event.shiftKey) {
         const target = document.querySelector(`[aria-keyshortcuts~="${shortcut}"]`)
-        if (target instanceof HTMLElement) {
+        if (target instanceof HTMLButtonElement) {
+          target.click()
+          event.preventDefault()
+        } else if (target instanceof HTMLElement) {
           target.focus()
           event.preventDefault()
         }
@@ -173,16 +164,7 @@ export function App() {
   }, [ctl]);
 
   return <>
-    <header>
-      <div className="left">
-      </div>
-      <div className="mid">
-        <IbisSearch ctl={ctl} facade={facade} />
-      </div>
-      <div className="right">
-        <SyncIndicator />
-      </div>
-    </header>
+    <IbisSearch ctl={ctl} facade={facade} />
 
     <CardsRow
       cards={widgets.map((widget, i) => <WidgetCard
