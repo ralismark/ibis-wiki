@@ -1,5 +1,5 @@
 {
-  "plugins": {
-    "postcss-nesting": {}
-  }
+	"plugins": {
+		"postcss-nesting": {}
+	}
 }

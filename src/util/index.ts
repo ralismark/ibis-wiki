@@ -1,50 +1,58 @@
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export function assertUnreachable(_: never): never {
-  throw new Error("unreachable!")
+export function assertUnreachable(_value: never): never {
+	throw new Error("unreachable!")
 }
 
 export async function batched<T>(
-  ps: Promise<T>[],
-  process: (vals: T[]) => Promise<void> | void,
-  reject: (err: any) => void,
+	ps: Promise<T>[],
+	process: (vals: T[]) => Promise<void> | void,
+	reject: (err: unknown) => void,
 ): Promise<void> {
-  let pending: T[] = []
-  let activeTask: Promise<void> | null = null
+	let pending: T[] = []
+	let activeTask: Promise<void> | null = null
 
-  const startProcess = async () => {
-    while (pending.length > 0) {
-      const batch = pending
-      pending = []
-      const p = process(batch)
-      if (p instanceof Promise) await p
-    }
-    activeTask = null
-  }
+	const startProcess = async () => {
+		while (pending.length > 0) {
+			const batch = pending
+			pending = []
+			const p = process(batch)
+			if (p instanceof Promise) await p
+		}
+		activeTask = null
+	}
 
-  await Promise.all(ps.map(async p => p.then(v => {
-    pending.push(v)
-    if (activeTask === null) activeTask = startProcess()
-  }).catch(reject)))
+	await Promise.all(
+		ps.map(async (p) =>
+			p
+				.then((v) => {
+					pending.push(v)
+					if (activeTask === null) activeTask = startProcess()
+				})
+				.catch(reject)
+		),
+	)
 
-  if (activeTask !== null) await (activeTask as Promise<void>)
+	if (activeTask !== null) await (activeTask as Promise<void>)
 }
 
-export function tryCall<T>(fn: () => T): {value: T, error?: never} | {value?: never, error: any} {
-  try {
-    return {value: fn()}
-  } catch(e) {
-    return {error: e}
-  }
+export function tryCall<T>(
+	fn: () => T,
+): { value: T; error?: never } | { value?: never; error: any } {
+	try {
+		return { value: fn() }
+	} catch (e) {
+		return { error: e }
+	}
 }
 
 export function once<T>(fn: () => T): () => T {
-  let run = false
-  let value: T
-  return () => {
-    if (!run) value = fn()
-    return value
-  }
+	const run = false
+	let value: T
+	return () => {
+		if (!run) value = fn()
+		return value
+	}
 }

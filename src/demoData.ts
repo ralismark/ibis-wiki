@@ -1,6 +1,5 @@
 export default {
-
-  "index": `
+	index: `
 # Welcome to ibis wiki!
 
 This is just a demo site, with some demo files to give you an idea of what this is like. Any changes you make here will be lost when you leave or refresh this page.
@@ -14,10 +13,9 @@ In addition to the features provided by that library, links are also clickable! 
 For more info have a look at <https://github.com/ralismark/ibis-wiki>.
   `.trim(),
 
-  "internal-links": `
+	"internal-links": `
 Internal links are links to other notes in the wiki.
 
 They are indexed and you can see what notes link to a certain note at the bottom of each note!
   `.trim(),
-
 }

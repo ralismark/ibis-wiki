@@ -1,19 +1,19 @@
 .ImagePreviewWidget {
-  display: block;
-  float: left;
-  clear: both;
-  width: 100%;
-  padding: 0 2rem;
+	display: block;
+	float: left;
+	clear: both;
+	width: 100%;
+	padding: 0 2rem;
 }
 
 .ImagePreviewWidget > img {
-  height: 30rem;
+	height: 30rem;
 }
 
 .cm-line:not(.cm-activeLine) .cm-conceal {
-  display: none;
+	display: none;
 }
 
 .cm-activeLine .KatexWidget {
-  display: none;
+	display: none;
 }

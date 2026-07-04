@@ -15,24 +15,62 @@
 		cursor: pointer;
 		color: black;
 
-		&[data-month="1"]  { --bg: 0;   --month-name: "Jan"; }
-		&[data-month="2"]  { --bg: 30;  --month-name: "Feb"; }
-		&[data-month="3"]  { --bg: 60;  --month-name: "Mar"; }
-		&[data-month="4"]  { --bg: 90;  --month-name: "Apr"; }
-		&[data-month="5"]  { --bg: 120; --month-name: "May"; }
-		&[data-month="6"]  { --bg: 150; --month-name: "Jun"; }
-		&[data-month="7"]  { --bg: 180; --month-name: "Jul"; }
-		&[data-month="8"]  { --bg: 210; --month-name: "Aug"; }
-		&[data-month="9"]  { --bg: 240; --month-name: "Sep"; }
-		&[data-month="10"] { --bg: 270; --month-name: "Oct"; }
-		&[data-month="11"] { --bg: 300; --month-name: "Nov"; }
-		&[data-month="12"] { --bg: 330; --month-name: "Dec"; }
+		&[data-month="1"] {
+			--bg: 0;
+			--month-name: "Jan";
+		}
+		&[data-month="2"] {
+			--bg: 30;
+			--month-name: "Feb";
+		}
+		&[data-month="3"] {
+			--bg: 60;
+			--month-name: "Mar";
+		}
+		&[data-month="4"] {
+			--bg: 90;
+			--month-name: "Apr";
+		}
+		&[data-month="5"] {
+			--bg: 120;
+			--month-name: "May";
+		}
+		&[data-month="6"] {
+			--bg: 150;
+			--month-name: "Jun";
+		}
+		&[data-month="7"] {
+			--bg: 180;
+			--month-name: "Jul";
+		}
+		&[data-month="8"] {
+			--bg: 210;
+			--month-name: "Aug";
+		}
+		&[data-month="9"] {
+			--bg: 240;
+			--month-name: "Sep";
+		}
+		&[data-month="10"] {
+			--bg: 270;
+			--month-name: "Oct";
+		}
+		&[data-month="11"] {
+			--bg: 300;
+			--month-name: "Nov";
+		}
+		&[data-month="12"] {
+			--bg: 330;
+			--month-name: "Dec";
+		}
 
 		&[data-exists] {
 			border-color: grey;
 			background: hsl(var(--bg), 100%, 80%);
 		}
-		&:not([data-exists]) { color: transparent; }
+		&:not([data-exists]) {
+			color: transparent;
+		}
 
 		&[data-today] {
 			background: hsl(var(--bg), 100%, 50%);

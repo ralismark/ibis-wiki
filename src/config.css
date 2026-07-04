@@ -1,42 +1,40 @@
 .Config {
+	label,
+	fieldset {
+		display: block;
+		clear: both;
+	}
 
-  label,
-  fieldset {
-    display: block;
-    clear: both;
-  }
+	label > input,
+	label > select {
+		float: right;
+	}
 
-  label > input,
-  label > select {
-    float: right;
-  }
-
-  fieldset {
-    border: 1px solid var(--stroke);
-    border-radius: 0.2em;
-  }
-
+	fieldset {
+		border: 1px solid var(--stroke);
+		border-radius: 0.2em;
+	}
 }
 
 fieldset.RadioTabs {
-  display: flex;
-  flex-wrap: wrap;
+	display: flex;
+	flex-wrap: wrap;
 
-  > label {
-    display: inline-block;
+	> label {
+		display: inline-block;
 
-    > input {
-      float: initial;
-    }
+		> input {
+			float: initial;
+		}
 
-    & + fieldset {
-      display: none;
-    }
+		& + fieldset {
+			display: none;
+		}
 
-    &:has(:checked) + fieldset {
-      display: block;
-      order: 1;
-      width: 100%;
-    }
-  }
+		&:has(:checked) + fieldset {
+			display: block;
+			order: 1;
+			width: 100%;
+		}
+	}
 }

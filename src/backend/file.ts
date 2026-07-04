@@ -1,13 +1,13 @@
 import { EditorState, Text, Transaction } from "@codemirror/state"
-import { assertUnreachable, sleep } from "../util"
-import { Store, ETag, ETagMismatchError } from "./store"
-import { DEBOUNCE_MS, LsWal, STATE_REPLY_TIMEOUT_MS } from "../globals"
-import extensions from "../codemirror/extensions"
-import { ExternMemo, ExternState } from "../extern"
+import { toast } from "react-toastify"
 import { EditorStateRef } from "../codemirror/Controlled"
+import extensions from "../codemirror/extensions"
 import { setMerging } from "../codemirror/merge"
 import { stateFromJSON, stateToJSON, trFromJSON, trToJSON } from "../codemirror/share"
-import { toast } from "react-toastify"
+import { ExternMemo, ExternState } from "../extern"
+import { DEBOUNCE_MS, LsWal, STATE_REPLY_TIMEOUT_MS } from "../globals"
+import { assertUnreachable, sleep } from "../util"
+import { ETag, ETagMismatchError, Store } from "./store"
 
 // TODO when we close a file before it's put, it's not actually put
 
@@ -16,29 +16,29 @@ export const NumSyncing = new ExternState<number>(0)
 
 // Representation of a file in local storage
 type StashedRepr = {
-  content: string,
-  etag: ETag, // TODO rename this to baseETag
+	content: string
+	etag: ETag // TODO rename this to baseETag
 }
 
 // For debugging, so it's easier to track instances
 let counter = 0
 
 type MsgRequestState = {
-  type: "requestState",
+	type: "requestState"
 }
 type MsgState = {
-  type: "state",
-  state: unknown, // from stateToJSON
-  lastSaved: string[], // from Text.toJSON
-  baseETag: ETag,
-  remoteETag: ETag,
+	type: "state"
+	state: unknown // from stateToJSON
+	lastSaved: string[] // from Text.toJSON
+	baseETag: ETag
+	remoteETag: ETag
 }
 type MsgUpdate = {
-  type: "update",
-  tr?: unknown,
-  lastSaved?: string[],
-  baseETag?: ETag,
-  remoteETag?: ETag,
+	type: "update"
+	tr?: unknown
+	lastSaved?: string[]
+	baseETag?: ETag
+	remoteETag?: ETag
 }
 
 type Msg = MsgRequestState | MsgState | MsgUpdate
@@ -73,402 +73,405 @@ type Msg = MsgRequestState | MsgState | MsgUpdate
  * _store_ version, disregarding local changes that haven't been synced.
  */
 export class File {
-  readonly id: number = counter++
+	readonly id: number = counter++
 
-  readonly path: string
-  readonly store: Store
+	readonly path: string
+	readonly store: Store
 
-  readonly bc: BroadcastChannel
+	readonly bc: BroadcastChannel
 
-  // Editor state i.e. the contents of the file.
-  readonly esr: EditorStateRef
+	// Editor state i.e. the contents of the file.
+	readonly esr: EditorStateRef
 
-  // Remote version we're derived from. Used to ensure we don't overwrite
-  // anything when we put (a bit like atomic compare-and-swap).
-  //
-  // When we're in a conflict, this won't be the latest version of remote we're
-  // aware of -- that's remoteETag.
-  private baseETag: ETag
+	// Remote version we're derived from. Used to ensure we don't overwrite
+	// anything when we put (a bit like atomic compare-and-swap).
+	//
+	// When we're in a conflict, this won't be the latest version of remote we're
+	// aware of -- that's remoteETag.
+	private baseETag: ETag
 
-  // Latest version of remote we know about. The same as baseETag, except during
-  // a conflict, in which case remoteETag is the version we're comparing
-  // against.
-  //
-  // We need to store this in order to set baseETag when we finish resolving a
-  // conflict.
-  private remoteETag: ETag
+	// Latest version of remote we know about. The same as baseETag, except during
+	// a conflict, in which case remoteETag is the version we're comparing
+	// against.
+	//
+	// We need to store this in order to set baseETag when we finish resolving a
+	// conflict.
+	private remoteETag: ETag
 
-  // Last document that was saved. This is used to determine whether there are
-  // unsaved edits.
-  private lastSaved: Text
+	// Last document that was saved. This is used to determine whether there are
+	// unsaved edits.
+	private lastSaved: Text
 
-  // --------------------------------------------------------------------------
+	// --------------------------------------------------------------------------
 
-  // Whether we're in a conflicted state or not
-  readonly isConflicting = new ExternMemo(() => this.remoteETag != this.baseETag)
+	// Whether we're in a conflicted state or not
+	readonly isConflicting = new ExternMemo(() => this.remoteETag != this.baseETag)
 
-  readonly abort: AbortController = new AbortController()
+	readonly abort: AbortController = new AbortController()
 
-  private constructor(
-    path: string,
-    store: Store,
-    bc: BroadcastChannel,
-    state: EditorState,
-    baseETag: ETag,
-    remoteETag: ETag,
-    lastSaved: Text
-  ) {
-    this.path = path
-    this.store = store
-    this.bc = bc
-    this.esr = new EditorStateRef(state)
-    this.baseETag = baseETag
-    this.remoteETag = remoteETag
-    this.lastSaved = lastSaved
+	private constructor(
+		path: string,
+		store: Store,
+		bc: BroadcastChannel,
+		state: EditorState,
+		baseETag: ETag,
+		remoteETag: ETag,
+		lastSaved: Text,
+	) {
+		this.path = path
+		this.store = store
+		this.bc = bc
+		this.esr = new EditorStateRef(state)
+		this.baseETag = baseETag
+		this.remoteETag = remoteETag
+		this.lastSaved = lastSaved
 
-    this.bc.onmessage = ev => {
-      const msg: Msg = ev.data
-      console.debug("[file]", this.path, this.id, "recv", msg)
-      if (msg.type === "requestState") {
-        const reply: MsgState = {
-          type: "state",
-          state: stateToJSON(this.esr.getState()),
-          lastSaved: this.lastSaved.toJSON(),
-          baseETag: this.baseETag,
-          remoteETag: this.remoteETag,
-        }
-        console.debug("[file]", this.path, this.id, "send", reply)
-        bc.postMessage(reply)
-      } else if (msg.type === "state") {
-        // do nothing
-        // TODO verify that our state matches the one we saw?
-      } else if (msg.type === "update") {
-        if (msg.tr !== undefined) {
-          // will dirty via esr subscription
-          this.esr.update(trFromJSON(msg.tr as any, this.esr.getState()))
-        }
-        if (msg.lastSaved !== undefined) {
-          this.lastSaved = Text.of(msg.lastSaved)
-        }
-        if (msg.baseETag !== undefined) {
-          this.baseETag = msg.baseETag
-          this.isConflicting.signal() // TODO we might be triggering this more than needed
-        }
-        if (msg.remoteETag !== undefined) {
-          this.remoteETag = msg.remoteETag
-          this.isConflicting.signal() // TODO we might be triggering this more than needed
-        }
-      } else assertUnreachable(msg)
-    }
+		this.bc.onmessage = (ev) => {
+			const msg: Msg = ev.data
+			console.debug("[file]", this.path, this.id, "recv", msg)
+			if (msg.type === "requestState") {
+				const reply: MsgState = {
+					type: "state",
+					state: stateToJSON(this.esr.getState()),
+					lastSaved: this.lastSaved.toJSON(),
+					baseETag: this.baseETag,
+					remoteETag: this.remoteETag,
+				}
+				console.debug("[file]", this.path, this.id, "send", reply)
+				bc.postMessage(reply)
+			} else if (msg.type === "state") {
+				// do nothing
+				// TODO verify that our state matches the one we saw?
+			} else if (msg.type === "update") {
+				if (msg.tr !== undefined) {
+					// will dirty via esr subscription
+					this.esr.update(trFromJSON(msg.tr as any, this.esr.getState()))
+				}
+				if (msg.lastSaved !== undefined) {
+					this.lastSaved = Text.of(msg.lastSaved)
+				}
+				if (msg.baseETag !== undefined) {
+					this.baseETag = msg.baseETag
+					this.isConflicting.signal() // TODO we might be triggering this more than needed
+				}
+				if (msg.remoteETag !== undefined) {
+					this.remoteETag = msg.remoteETag
+					this.isConflicting.signal() // TODO we might be triggering this more than needed
+				}
+			} else assertUnreachable(msg)
+		}
 
-    const unsub = this.esr.subscribe(tr => {
-      console.debug("[file]", this.path, this.id, "tr", tr)
-      if (!tr.annotation(Transaction.remote)) {
-        const msg: MsgUpdate = {
-          type: "update",
-          tr: trToJSON(tr),
-        }
-        console.debug("[file]", path, this.id, "send", msg)
-        this.bc.postMessage(msg)
-      }
+		const unsub = this.esr.subscribe((tr) => {
+			console.debug("[file]", this.path, this.id, "tr", tr)
+			if (!tr.annotation(Transaction.remote)) {
+				const msg: MsgUpdate = {
+					type: "update",
+					tr: trToJSON(tr),
+				}
+				console.debug("[file]", path, this.id, "send", msg)
+				this.bc.postMessage(msg)
+			}
 
-      if (/*tr instanceof EditorState ||*/ tr.docChanged) {
-        this.dirty()
-      }
-    })
+			if (/*tr instanceof EditorState ||*/ tr.docChanged) {
+				this.dirty()
+			}
+		})
 
-    if (!this.lastSaved.eq(this.doc())) {
-      this.dirty()
-    }
+		if (!this.lastSaved.eq(this.doc())) {
+			this.dirty()
+		}
 
-    const close = () => {
-      bc.close()
-      unsub()
-      console.debug("[file]", this.path, this.id, "close")
-    }
-    if (this.abort.signal.aborted) close()
-    else this.abort.signal.addEventListener("abort", close)
+		const close = () => {
+			bc.close()
+			unsub()
+			console.debug("[file]", this.path, this.id, "close")
+		}
+		if (this.abort.signal.aborted) close()
+		else this.abort.signal.addEventListener("abort", close)
 
-    console.debug("[file]", this.path, this.id, "construct", this)
-  }
+		console.debug("[file]", this.path, this.id, "construct", this)
+	}
 
-  /**
-   * new wraps the constructor, handling the logic for loading the file from
-   * another instance, or localstorage/store.
-   */
-  static async new(store: Store, path: string): Promise<File> {
-    console.debug("[file]", path, "new")
-    const bc = new BroadcastChannel(`ibis/file/${path}`)
+	/**
+	 * new wraps the constructor, handling the logic for loading the file from
+	 * another instance, or localstorage/store.
+	 */
+	static async new(store: Store, path: string): Promise<File> {
+		console.debug("[file]", path, "new")
+		const bc = new BroadcastChannel(`ibis/file/${path}`)
 
-    type Ret = { state: EditorState, lastSaved: Text, baseETag: ETag, remoteETag: ETag }
-    const { state, lastSaved, baseETag, remoteETag } = await new Promise<Ret>(async resolve => {
-      const done = new AbortController()
+		type Ret = { state: EditorState; lastSaved: Text; baseETag: ETag; remoteETag: ETag }
+		const { state, lastSaved, baseETag, remoteETag } = await new Promise<Ret>(async (resolve) => {
+			const done = new AbortController()
 
-      // try getting the state from another instance
-      bc.onmessage = ev => {
-        const msg: Msg = ev.data
-        console.debug("[file]", path, "recv", msg)
-        if (msg.type === "state") {
-          done.abort()
-          bc.onmessage = null
-          resolve({
-            state: stateFromJSON(msg.state),
-            lastSaved: Text.of(msg.lastSaved),
-            baseETag: msg.baseETag,
-            remoteETag: msg.remoteETag,
-          })
-        }
-      }
-      const msg: MsgRequestState = { type: "requestState" }
-      console.debug("[file]", path, "send", msg)
-      bc.postMessage(msg)
+			// try getting the state from another instance
+			bc.onmessage = (ev) => {
+				const msg: Msg = ev.data
+				console.debug("[file]", path, "recv", msg)
+				if (msg.type === "state") {
+					done.abort()
+					bc.onmessage = null
+					resolve({
+						state: stateFromJSON(msg.state),
+						lastSaved: Text.of(msg.lastSaved),
+						baseETag: msg.baseETag,
+						remoteETag: msg.remoteETag,
+					})
+				}
+			}
+			const msg: MsgRequestState = { type: "requestState" }
+			console.debug("[file]", path, "send", msg)
+			bc.postMessage(msg)
 
-      await sleep(STATE_REPLY_TIMEOUT_MS)
+			await sleep(STATE_REPLY_TIMEOUT_MS)
 
-      // otherwise, load from localstorage & remote
-      try {
+			// otherwise, load from localstorage & remote
+			try {
+				await navigator.locks.request(
+					`ibis/file/${path}/fetch`,
+					{
+						signal: done.signal,
+					},
+					async () => {
+						// NOTE There may be a race condition between:
+						//
+						// 1. Another tab fetches and broadcasts state, which we receive
+						// 2. Us acquiring this lock and trying to fetch
+						//
+						// This can be fixed by either waiting STATE_REPLY_TIMEOUT_MS again,
+						// or by giving the abort signal to store.load
 
-        await navigator.locks.request(`ibis/file/${path}/fetch`, {
-          signal: done.signal
-        }, async () => {
-          // NOTE There may be a race condition between:
-          //
-          // 1. Another tab fetches and broadcasts state, which we receive
-          // 2. Us acquiring this lock and trying to fetch
-          //
-          // This can be fixed by either waiting STATE_REPLY_TIMEOUT_MS again,
-          // or by giving the abort signal to store.load
+						const { content: remoteContent, etag: remoteETag } = await store.load(path)
+						if (done.signal.aborted) return // more or less fix the above issue
+						const stashed: StashedRepr | null = JSON.parse(LsWal.getItem(path) ?? "null")
+						if (stashed?.content === remoteContent) {
+							// There's a stashed version, but it's not dirty? This shouldn't
+							// happen, but it's been observed to.
+							toast.warn(`"${path}" restored from local copy but isn't dirty`)
+							LsWal.removeItem(path)
+						}
 
-          const { content: remoteContent, etag: remoteETag } = await store.load(path)
-          if (done.signal.aborted) return // more or less fix the above issue
-          const stashed: StashedRepr | null = JSON.parse(LsWal.getItem(path) ?? "null")
-          if (stashed?.content === remoteContent) {
-            // There's a stashed version, but it's not dirty? This shouldn't
-            // happen, but it's been observed to.
-            toast.warn(`"${path}" restored from local copy but isn't dirty`)
-            LsWal.removeItem(path)
-          }
+						const conflict = stashed !== null && stashed.etag !== remoteETag
+						const remoteText = Text.of(remoteContent.split(/\r?\n/))
 
-          const conflict = stashed !== null && stashed.etag !== remoteETag
-          const remoteText = Text.of(remoteContent.split(/\r?\n/))
+						const out = {
+							state: EditorState.create({
+								doc: stashed?.content ?? remoteContent,
+								extensions,
+							}).update({
+								// We can't just do mergingDoc.of, see codemirror/merge.ts for
+								// why (it's a big HACK).
+								effects: setMerging.of(conflict ? remoteText : null),
+							}).state,
+							lastSaved: remoteText,
+							baseETag: stashed ? stashed.etag : remoteETag,
+							remoteETag: remoteETag,
+						}
+						// If file was opened in another tab at the same time, they'll also be
+						// trying to acquire this lock & fetch the file. Send them the state
+						// to abort that.
+						const msg: MsgState = {
+							type: "state",
+							state: stateToJSON(out.state),
+							lastSaved: out.lastSaved.toJSON(),
+							baseETag: out.baseETag,
+							remoteETag: out.remoteETag,
+						}
+						console.debug("[file]", path, "send", msg)
+						bc.postMessage(msg)
 
-          const out = {
-            state: EditorState.create({
-              doc: stashed?.content ?? remoteContent,
-              extensions,
-            }).update({
-              // We can't just do mergingDoc.of, see codemirror/merge.ts for
-              // why (it's a big HACK).
-              effects: setMerging.of(conflict ? remoteText : null),
-            }).state,
-            lastSaved: remoteText,
-            baseETag: stashed ? stashed.etag : remoteETag,
-            remoteETag: remoteETag,
-          }
-          // If file was opened in another tab at the same time, they'll also be
-          // trying to acquire this lock & fetch the file. Send them the state
-          // to abort that.
-          const msg: MsgState = {
-            type: "state",
-            state: stateToJSON(out.state),
-            lastSaved: out.lastSaved.toJSON(),
-            baseETag: out.baseETag,
-            remoteETag: out.remoteETag,
-          }
-          console.debug("[file]", path, "send", msg)
-          bc.postMessage(msg)
+						bc.onmessage = null
+						resolve(out)
+					},
+				)
+			} catch (e) {
+				if (e instanceof DOMException && e.name === "AbortError") {
+					// catch abort
+				} else {
+					throw e
+				}
+			}
+		})
 
-          bc.onmessage = null
-          resolve(out)
-        })
+		return new this(path, store, bc, state, baseETag, remoteETag, lastSaved)
+	}
 
-      } catch(e) {
-        if (e instanceof DOMException && e.name === "AbortError") {
-          // catch abort
-        } else {
-          throw e
-        }
-      }
-    })
+	private runningPut: null | Promise<void> = null
 
-    return new this(
-      path,
-      store,
-      bc,
-      state,
-      baseETag,
-      remoteETag,
-      lastSaved,
-    )
-  }
+	private shouldPut(): boolean {
+		return this.baseETag === this.remoteETag && !this.lastSaved.eq(this.doc())
+	}
 
-  private runningPut: null | Promise<void> = null
+	private dirty() {
+		this.stash()
 
-  private shouldPut(): boolean {
-    return this.baseETag === this.remoteETag && !this.lastSaved.eq(this.doc())
-  }
+		if (this.runningPut !== null) {
+			return // there is already a task running
+		}
 
-  private dirty() {
-    this.stash()
+		// It's possible for the put task to immediately finish, before the
+		// assignment can complete. To handle that, we need another variable.
+		let putDone = false
 
-    if (this.runningPut !== null) {
-      return // there is already a task running
-    }
+		this.runningPut = (async () => {
+			NumDirty.set(NumDirty.getSnapshot() + 1)
+			try {
+				// Repeat entire syncing logic if there have been more changes in the
+				// meantime.
+				while (this.shouldPut()) {
+					// Ensure that there aren't racing syncs between instances of this
+					// file.
+					// TODO abort lock if we receive a broadcast that the file got synced
+					await navigator.locks.request(
+						`ibis/file/${this.path}/put`,
+						{
+							signal: this.abort.signal,
+						},
+						async () => {
+							// If there was lock contention, the other instance of this file
+							// could've finished syncing before we acquired the lock.
+							if (!this.shouldPut()) return
 
-    // It's possible for the put task to immediately finish, before the
-    // assignment can complete. To handle that, we need another variable.
-    let putDone = false
+							// Bit of sleep to reduce redundant syncs.
+							await sleep(DEBOUNCE_MS)
 
-    this.runningPut = (async () => {
-      NumDirty.set(NumDirty.getSnapshot() + 1)
-      try {
-        // Repeat entire syncing logic if there have been more changes in the
-        // meantime.
-        while (this.shouldPut()) {
+							// Since we have the lock, the only way for this condition to be
+							// true is for the user to reverse all edits made to the file since
+							// we last synced. Which is very unlikely.
+							// TODO is this needed?
+							if (!this.shouldPut()) return
 
-          // Ensure that there aren't racing syncs between instances of this
-          // file.
-          // TODO abort lock if we receive a broadcast that the file got synced
-          await navigator.locks.request(`ibis/file/${this.path}/put`, {
-            signal: this.abort.signal,
-          }, async () => {
-            // If there was lock contention, the other instance of this file
-            // could've finished syncing before we acquired the lock.
-            if (!this.shouldPut()) return
+							const content = this.doc()
 
-            // Bit of sleep to reduce redundant syncs.
-            await sleep(DEBOUNCE_MS)
+							try {
+								// Actually do the syncing.
+								NumSyncing.set(NumSyncing.getSnapshot() + 1)
+								const { etag } = await this.store.write(
+									this.path,
+									content.toString(),
+									this.baseETag,
+								)
+								// success :>
+								this.baseETag = this.remoteETag = etag
+								// Rest of success logic outside this try/catch/finally block, so
+								// exceptions there aren't caught by the error handling for
+								// store.write.
+							} catch (e) {
+								if (e instanceof ETagMismatchError) {
+									// enter conflicted state
+									const { content, etag } = await this.store.load(this.path)
+									this.remoteETag = etag
+									const tr = this.esr.update({
+										effects: setMerging.of(Text.of(content.split(/\r?\n/))),
+										annotations: Transaction.remote.of(true), // suppress so we can do it atomically
+									})
+									this.isConflicting.signal()
 
-            // Since we have the lock, the only way for this condition to be
-            // true is for the user to reverse all edits made to the file since
-            // we last synced. Which is very unlikely.
-            // TODO is this needed?
-            if (!this.shouldPut()) return
+									const msg: MsgUpdate = {
+										type: "update",
+										tr: trToJSON(tr),
+										remoteETag: etag,
+									}
+									console.debug("[file]", this.path, this.id, "send", msg)
+									this.bc.postMessage(msg)
 
-            const content = this.doc()
+									toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
+									console.debug(
+										"[file]",
+										this.path,
+										this.id,
+										"conflict",
+										this.remoteETag,
+										this.baseETag,
+									)
+								} else {
+									// a different error, e.g. network down
+									toast.error(`Couldn't save "${this.path}": ${e}`)
+								}
 
-            try {
-              // Actually do the syncing.
-              NumSyncing.set(NumSyncing.getSnapshot() + 1)
-              const { etag } = await this.store.write(
-                this.path,
-                content.toString(),
-                this.baseETag,
-              )
-              // success :>
-              this.baseETag = this.remoteETag = etag
-              // Rest of success logic outside this try/catch/finally block, so
-              // exceptions there aren't caught by the error handling for
-              // store.write.
-            } catch(e) {
-              if (e instanceof ETagMismatchError) {
-                // enter conflicted state
-                const { content, etag } = await this.store.load(this.path)
-                this.remoteETag = etag
-                const tr = this.esr.update({
-                  effects: setMerging.of(Text.of(content.split(/\r?\n/))),
-                  annotations: Transaction.remote.of(true), // suppress so we can do it atomically
-                })
-                this.isConflicting.signal()
+								return // exit lock
+							} finally {
+								// Whether it succeeded or not, there is one less active write
+								// request to the store.
+								// TODO maybe this should be handled in Facade?
+								NumSyncing.set(NumSyncing.getSnapshot() - 1)
+							}
 
-                const msg: MsgUpdate = {
-                  type: "update",
-                  tr: trToJSON(tr),
-                  remoteETag: etag,
-                }
-                console.debug("[file]", this.path, this.id, "send", msg)
-                this.bc.postMessage(msg)
+							this.lastSaved = content
+							this.stash() // update etag of stash, shouldn't change content
 
-                toast.warn(`Conflicting changes on "${this.path}", please fix manually`)
-                console.debug("[file]", this.path, this.id, "conflict", this.remoteETag, this.baseETag)
-              } else {
-                // a different error, e.g. network down
-                toast.error(`Couldn't save "${this.path}": ${e}`)
-              }
+							const msg: MsgUpdate = {
+								type: "update",
+								lastSaved: content.toJSON(),
+								baseETag: this.baseETag,
+								remoteETag: this.remoteETag,
+							}
+							console.debug("[file]", this.path, this.id, "send", msg)
+							this.bc.postMessage(msg)
+						},
+					)
+				}
 
-              return // exit lock
-            } finally {
-              // Whether it succeeded or not, there is one less active write
-              // request to the store.
-              // TODO maybe this should be handled in Facade?
-              NumSyncing.set(NumSyncing.getSnapshot() - 1)
-            }
+				// if we're not in a conflict, and there's no local changes, then we can
+				// safely delete the stash
+				if (this.baseETag === this.remoteETag && this.lastSaved.eq(this.doc())) this.clearStash()
+			} catch (e) {
+				if (e instanceof DOMException && e.name === "AbortError") {
+					// catch abort
+				} else {
+					// unexpected error (sync errors are handled within lock)
+					throw e
+				}
+			} finally {
+				NumDirty.set(NumDirty.getSnapshot() - 1) // TODO this isn't accurate as it excludes unmerged/stashed entries
+				this.runningPut = null
+				putDone = true // in case we were too fast
+			}
+		})()
 
-            this.lastSaved = content
-            this.stash() // update etag of stash, shouldn't change content
+		if (putDone) this.runningPut = null
+	}
 
-            const msg: MsgUpdate = {
-              type: "update",
-              lastSaved: content.toJSON(),
-              baseETag: this.baseETag,
-              remoteETag: this.remoteETag,
-            }
-            console.debug("[file]", this.path, this.id, "send", msg)
-            this.bc.postMessage(msg)
-          })
-        }
+	// End a conflict by committing the local version to remote
+	resolveConflict() {
+		if (this.baseETag === this.remoteETag) {
+			console.error("Attempting to resolveConflict on non-conflicting file", this)
+			return
+		}
 
-        // if we're not in a conflict, and there's no local changes, then we can
-        // safely delete the stash
-        if (this.baseETag === this.remoteETag && this.lastSaved.eq(this.doc())) this.clearStash()
+		this.baseETag = this.remoteETag
+		const tr = this.esr.update({
+			effects: setMerging.of(null),
+			annotations: Transaction.remote.of(true), // suppress so we can do it atomically
+		})
+		this.isConflicting.signal()
+		this.dirty()
 
-      } catch(e) {
-        if (e instanceof DOMException && e.name === "AbortError") {
-          // catch abort
-        } else {
-          // unexpected error (sync errors are handled within lock)
-          throw e
-        }
-      } finally {
-        NumDirty.set(NumDirty.getSnapshot() - 1) // TODO this isn't accurate as it excludes unmerged/stashed entries
-        this.runningPut = null
-        putDone = true // in case we were too fast
-      }
-    })()
+		const msg: MsgUpdate = {
+			type: "update",
+			tr: trToJSON(tr),
+			baseETag: this.baseETag,
+		}
+		console.debug("[file]", this.path, this.id, "send", msg)
+		this.bc.postMessage(msg)
+	}
 
-    if (putDone) this.runningPut = null
-  }
+	// helper functions
+	private doc(): Text {
+		return this.esr.getState().doc
+	}
 
-  // End a conflict by committing the local version to remote
-  resolveConflict() {
-    if (this.baseETag === this.remoteETag) {
-      console.error("Attempting to resolveConflict on non-conflicting file", this)
-      return
-    }
+	private stash() {
+		const stashed: StashedRepr = {
+			content: this.doc().toString(),
+			etag: this.baseETag,
+		}
+		console.debug("[file]", this.path, this.id, "stash", stashed)
+		LsWal.setItem(this.path, JSON.stringify(stashed))
+	}
 
-    this.baseETag = this.remoteETag
-    const tr = this.esr.update({
-      effects: setMerging.of(null),
-      annotations: Transaction.remote.of(true), // suppress so we can do it atomically
-    })
-    this.isConflicting.signal()
-    this.dirty()
-
-    const msg: MsgUpdate = {
-      type: "update",
-      tr: trToJSON(tr),
-      baseETag: this.baseETag,
-    }
-    console.debug("[file]", this.path, this.id, "send", msg)
-    this.bc.postMessage(msg)
-  }
-
-  // helper functions
-  private doc(): Text {
-    return this.esr.getState().doc
-  }
-
-  private stash() {
-    const stashed: StashedRepr = {
-      content: this.doc().toString(),
-      etag: this.baseETag,
-    }
-    console.debug("[file]", this.path, this.id, "stash", stashed)
-    LsWal.setItem(this.path, JSON.stringify(stashed))
-  }
-
-  private clearStash() {
-    console.debug("[file]", this.path, this.id, "clearStash")
-    LsWal.removeItem(this.path)
-  }
+	private clearStash() {
+		console.debug("[file]", this.path, this.id, "clearStash")
+		LsWal.removeItem(this.path)
+	}
 }

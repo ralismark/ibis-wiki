@@ -1,12 +1,20 @@
-import { unifiedMergeView, originalDocChangeEffect } from "@codemirror/merge"
-import { ChangeSet, Compartment, EditorState, Extension, StateEffect, StateEffectType, StateField, Text } from "@codemirror/state"
+import { originalDocChangeEffect, unifiedMergeView } from "@codemirror/merge"
+import {
+	ChangeSet,
+	Compartment,
+	EditorState,
+	Extension,
+	StateEffect,
+	StateEffectType,
+	StateField,
+	Text,
+} from "@codemirror/state"
 export { getOriginalDoc } from "@codemirror/merge"
 
 // HACK to get the StateEffectType
-export const updateOriginalDoc: StateEffectType<{doc: Text, changes: ChangeSet}>  = (originalDocChangeEffect(
-  EditorState.create({ doc: Text.empty }),
-  ChangeSet.empty(0),
-) as any).type
+export const updateOriginalDoc: StateEffectType<{ doc: Text; changes: ChangeSet }> = (
+	originalDocChangeEffect(EditorState.create({ doc: Text.empty }), ChangeSet.empty(0)) as any
+).type
 
 /*
  * This entire this is a big HACK for multiple reasons:
@@ -39,13 +47,13 @@ export const updateOriginalDoc: StateEffectType<{doc: Text, changes: ChangeSet}>
  * other way. But at least it kinda works now?
  */
 
-export const merging = new Compartment();
+export const merging = new Compartment()
 
 function compartment(m: Text | null): Extension[] {
-  if (m === null) return []
-  return unifiedMergeView({
-    original: m,
-  })
+	if (m === null) return []
+	return unifiedMergeView({
+		original: m,
+	})
 }
 
 // HACK effect to make the compartment reflect the state of mergingDoc e.g.
@@ -53,62 +61,61 @@ function compartment(m: Text | null): Extension[] {
 export const fixMerging = StateEffect.define<null>({})
 
 // effect to set whether we're merging
-export const setMerging = StateEffect.define<Text | null>({
-})
+export const setMerging = StateEffect.define<Text | null>({})
 
 export const mergingDoc = StateField.define<Text | null>({
-  create: () => null,
-  update(doc, tr) {
-    for (let e of tr.effects) {
-      if (e.is(updateOriginalDoc)) doc = e.value.doc
-      if (e.is(setMerging)) doc = e.value
-    }
-    return doc
-  },
-  provide(field) {
-    return [
-      merging.of([]),
-      EditorState.transactionExtender.of(tr => {
-        const fm = tr.effects.find(e => e.is(fixMerging))
-        if (fm === undefined) return {}
-        return {
-          effects: merging.reconfigure(compartment(tr.startState.field(field)))
-        }
-      }),
-      EditorState.transactionExtender.of(tr => {
-        // handle updateMerging
-        // TODO multiple updateMerging??
-        const sm = tr.effects.find(e => e.is(setMerging))
-        if (sm === undefined) return {}
-        const newDoc: Text | null = sm.value
-        const prevDoc = tr.startState.field(mergingDoc)
+	create: () => null,
+	update(doc, tr) {
+		for (const e of tr.effects) {
+			if (e.is(updateOriginalDoc)) doc = e.value.doc
+			if (e.is(setMerging)) doc = e.value
+		}
+		return doc
+	},
+	provide(field) {
+		return [
+			merging.of([]),
+			EditorState.transactionExtender.of((tr) => {
+				const fm = tr.effects.find((e) => e.is(fixMerging))
+				if (fm === undefined) return {}
+				return {
+					effects: merging.reconfigure(compartment(tr.startState.field(field))),
+				}
+			}),
+			EditorState.transactionExtender.of((tr) => {
+				// handle updateMerging
+				// TODO multiple updateMerging??
+				const sm = tr.effects.find((e) => e.is(setMerging))
+				if (sm === undefined) return {}
+				const newDoc: Text | null = sm.value
+				const prevDoc = tr.startState.field(mergingDoc)
 
-        if (newDoc !== null) {
-          if (prevDoc !== null) {
-            // update merge
-            // TODO is this correct
-            console.warn("Trying to start merge on merging document")
-            return {effects: merging.reconfigure(compartment(newDoc))}
-          } else {
-            // start merge
-            return {effects: merging.reconfigure(compartment(newDoc))}
-          }
-        } else {
-          if (prevDoc !== null) {
-            // end merge
-            return {effects: merging.reconfigure(compartment(newDoc))}
-          } else {
-            // merge already ended
-            return {}
-          }
-        }
-      }),
-    ]
-  },
-  toJSON(doc) {
-    return doc === null ? null : doc.toJSON()
-  },
-  fromJSON(json) {
-    return json === null ? null : Text.of(json)
-  }
+				if (newDoc !== null) {
+					if (prevDoc !== null) {
+						// update merge
+						// TODO is this correct
+						console.warn("Trying to start merge on merging document")
+						return { effects: merging.reconfigure(compartment(newDoc)) }
+					} else {
+						// start merge
+						return { effects: merging.reconfigure(compartment(newDoc)) }
+					}
+				} else {
+					if (prevDoc !== null) {
+						// end merge
+						return { effects: merging.reconfigure(compartment(newDoc)) }
+					} else {
+						// merge already ended
+						return {}
+					}
+				}
+			}),
+		]
+	},
+	toJSON(doc) {
+		return doc === null ? null : doc.toJSON()
+	},
+	fromJSON(json) {
+		return json === null ? null : Text.of(json)
+	},
 })
