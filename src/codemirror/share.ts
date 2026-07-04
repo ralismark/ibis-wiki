@@ -1,6 +1,7 @@
+import { updateOriginalDoc } from "@codemirror/merge"
 import { ChangeSet, EditorState, StateEffect, StateEffectType, StateField, Text, Transaction } from "@codemirror/state"
 import extensions from "./extensions"
-import { fixMerging, getOriginalDoc, mergingDoc, setMerging, updateOriginalDoc } from "./merge"
+import { fixMerging, getOriginalDoc, mergingDoc, setMerging } from "./merge"
 
 // Transaction effects --------------------------------------------------------
 

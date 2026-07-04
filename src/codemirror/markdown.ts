@@ -1,4 +1,4 @@
-import { CompletionContext, CompletionResult } from "@codemirror/autocomplete"
+import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete"
 import {
 	defineLanguageFacet,
 	HighlightStyle,
@@ -8,7 +8,7 @@ import {
 	syntaxHighlighting,
 	syntaxTree,
 } from "@codemirror/language"
-import { Extension } from "@codemirror/state"
+import { type Extension } from "@codemirror/state"
 import { styleTags, tags } from "@lezer/highlight"
 import * as md from "@lezer/markdown"
 import { FacadeExtern } from "../backend"
@@ -199,13 +199,14 @@ export default new LanguageSupport(
 				{ tag: tags.strikethrough, textDecoration: "line-through" },
 
 				// headings
-				{ tag: tags.heading1, fontSize: "1.5em" },
-				{ tag: tags.heading2, fontSize: "1.4em" },
-				{ tag: tags.heading3, fontSize: "1.3em" },
-				{ tag: tags.heading, fontSize: "1.2em" },
+				{ tag: tags.heading1, class: "cm-tag-h1" },
+				{ tag: tags.heading2, class: "cm-tag-h2" },
+				{ tag: tags.heading3, class: "cm-tag-h3" },
+				{ tag: tags.heading, class: "cm-tag-h4" },
 
 				// other
 				{ tag: tags.link, color: "#7777ee", textDecoration: "underline", cursor: "pointer" },
+				{ tag: tags.contentSeparator, class: "cm-tag-contentseparator" },
 			]),
 		),
 	],

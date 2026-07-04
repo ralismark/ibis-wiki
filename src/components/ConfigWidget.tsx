@@ -1,12 +1,14 @@
 import { Config } from "../config"
-import { type IWidget, WidgetContent, type WidgetControl } from "./Widget"
+import { IWidget, WidgetContent, type WidgetControl } from "./Widget"
 
-export class ConfigWidget implements IWidget {
+export class ConfigWidget extends IWidget {
 	show(ctl: WidgetControl): WidgetContent {
-		return new WidgetContent("ConfigWidget").withTitle("~ Config ~").withBody(
-			<section>
-				<Config onChange={(cfg) => ctl.updateConfig(cfg)} />
-			</section>,
-		)
+		return new WidgetContent("ConfigWidget")
+			.withTitle(<em>~ Config ~</em>)
+			.withBody(
+				<section>
+					<Config onChange={(cfg) => ctl.updateConfig(cfg)} />
+				</section>,
+			)
 	}
 }

@@ -1,5 +1,5 @@
 import { RangeSetBuilder } from "@codemirror/state"
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view"
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view"
 
 class Cache<K, V extends object> {
 	entries: Map<K, WeakRef<V>> = new Map()
@@ -17,14 +17,19 @@ class Cache<K, V extends object> {
 const decorationCache = new Cache<number, Decoration>()
 
 function indentSize(line: string): number {
+	const match = /[ \t]*[-<>]* ?/.exec(line)
+	if (!match) return 0
+
 	let indent = 0
-	for (const char of line) {
+	for (const char of match[0]) {
 		if (char == "\t") {
 			indent += 4 - (indent % 4)
 		} else if (char == " ") {
 			indent += 1
-		} else {
-			break
+		} else if (char == "-") {
+			indent += 1.5
+		} else if (char == ">" || char == "<") {
+			indent += 2.5
 		}
 	}
 	return indent

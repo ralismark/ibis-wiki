@@ -1,8 +1,8 @@
 import { toast } from "react-toastify"
 import { IDB_FTSEARCH } from "../globals"
 import { assertUnreachable, batched } from "../util"
-import { ETag, SummaryChanged } from "./store"
-import { Snapshot } from "./store/bridge"
+import { type ETag, type SummaryChanged } from "./store"
+import { type Snapshot } from "./store/bridge"
 import { outlinks, tokenise } from "./tokenise"
 
 // based on <https://gist.github.com/inexorabletash/a279f03ab5610817c0540c83857e4295>

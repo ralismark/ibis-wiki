@@ -6,14 +6,8 @@ import { Facade, FacadeExtern } from "./backend"
 import { CalendarWidget } from "./components/CalendarWidget"
 import { FileWidget, TodayWidget } from "./components/FileWidget"
 import { IbisSearch } from "./components/IbisSearch"
-import {
-	DummySiteControl,
-	reprToWidget,
-	type SiteControl,
-	type Widget,
-	type WidgetControl,
-	widgetToRepr,
-} from "./components/Widget"
+import { DummySiteControl, type SiteControl } from "./components/Widget"
+import { reprToWidget, type Widget, WidgetCard, widgetToRepr } from "./components/WidgetCard"
 import { type IbisConfig, loadConfig } from "./config"
 import { ExternState } from "./extern"
 import { LsWal, QUERY_PARAM_WIDGETS } from "./globals"
@@ -46,39 +40,6 @@ function initialWidgets() {
 		}
 	}
 	return widgets
-}
-
-function WidgetCard(props: { widget: Widget; ctl: WidgetControl; focusHook: any }) {
-	// TODO widgets might only need SiteControl and not WidgetControl, if all the
-	// widget controls are only used here
-	const contents = props.widget.show(props.ctl)
-	const elem = useRef<HTMLElement>(null)
-
-	useEffect(() => {
-		elem.current?.scrollIntoView({
-			behavior: "smooth",
-			block: "start",
-			inline: "center",
-		})
-		;(document.activeElement as HTMLElement | undefined)?.blur()
-	}, [elem, props.focusHook])
-
-	contents.controls.unshift(["×", () => props.ctl.closeSelf()])
-
-	return (
-		<article className={"WidgetCard " + contents.className} ref={elem}>
-			<h1>{contents.title}</h1>
-			<menu>
-				{contents.controls.map(([label, fn], idx) => (
-					<li key={idx}>
-						<button onClick={fn}>{label}</button>
-					</li>
-				))}
-			</menu>
-
-			{contents.body}
-		</article>
-	)
 }
 
 function CardsRow(props: { cards: JSX.Element[] }) {
@@ -151,7 +112,7 @@ export function App() {
 	}
 
 	function openWidget(newWidget: Widget, atStart: boolean) {
-		const existing = widgets.find((w) => widgetToRepr(w) === widgetToRepr(newWidget))
+		const existing = false && widgets.find((w) => widgetToRepr(w) === widgetToRepr(newWidget))
 		if (existing) {
 			focuses.current.set(existing, Symbol())
 			forceUpdate()
@@ -176,7 +137,7 @@ export function App() {
 			<CardsRow
 				cards={widgets.map((widget, i) => (
 					<WidgetCard
-						key={widgetToRepr(widget)}
+						key={widget.id}
 						widget={widget}
 						focusHook={focusOf(widget)}
 						ctl={{
@@ -185,6 +146,20 @@ export function App() {
 								const copy = [...widgets]
 								copy.splice(i, 1)
 								setWidgets(copy)
+							},
+							moveLeft() {
+								if (i > 0) {
+									const copy = [...widgets]
+									;[copy[i], copy[i - 1]] = [copy[i - 1], copy[i]]
+									setWidgets(copy)
+								}
+							},
+							moveRight() {
+								if (i + 1 < widgets.length) {
+									const copy = [...widgets]
+									;[copy[i], copy[i + 1]] = [copy[i + 1], copy[i]]
+									setWidgets(copy)
+								}
 							},
 						}}
 					/>

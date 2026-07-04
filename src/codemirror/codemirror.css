@@ -1,19 +1,66 @@
 .ImagePreviewWidget {
 	display: block;
-	float: left;
-	clear: both;
 	width: 100%;
 	padding: 0 2rem;
 }
 
 .ImagePreviewWidget > img {
-	height: 30rem;
+	object-fit: contain;
+	width: 100%;
+	max-height: 30rem;
 }
 
-.cm-line:not(.cm-activeLine) .cm-conceal {
-	display: none;
+.cm-scroller, .cm-content {
+	/* make line wrapping work... this feels like a hack but i'm not sure why
+	 * it's broken in the first place */
+	width: 100%;
 }
 
+.cm-editor {
+	border-top: 1px solid var(--stroke);
+	border-bottom: 1px solid var(--stroke);
+}
+
+.cm-editor .cm-line {
+	line-height: 1.15;
+	padding-top: 0.2em;
+	padding-bottom: 0.2em;
+
+	&:has(.cm-tag-contentseparator) {
+		background: linear-gradient(
+			transparent 0%,
+			color-mix(in srgb, var(--filled-bg), transparent 50%) 50%,
+			transparent 100%
+		);
+		line-height: 5em;
+		text-align: center;
+	}
+
+	.cm-tag-h1 {
+		font-size: 1.5em;
+	}
+	.cm-tag-h2 {
+		font-size: 1.4em;
+	}
+	.cm-tag-h3 {
+		font-size: 1.3em;
+	}
+	.cm-tag-h4 {
+		font-size: 1.2em;
+	}
+
+	&:has(.cm-tag-h1, .cm-tag-h2, .cm-tag-h3, .cm-tag-h4) {
+		color: var(--secondary);
+
+		background: linear-gradient(
+			transparent 0%,
+			color-mix(in srgb, var(--filled-bg), transparent 80%) 50%,
+			transparent 100%
+		);
+	}
+}
+
+.cm-line:not(.cm-activeLine) .cm-conceal,
 .cm-activeLine .KatexWidget {
 	display: none;
 }

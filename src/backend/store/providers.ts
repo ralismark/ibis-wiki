@@ -1,7 +1,7 @@
 import { AwsClient } from "aws4fetch"
 import { LsStore } from "../../globals"
-import { ETag, ETagMismatchError } from "."
-import { IStore, ListEntry, Snapshot } from "./bridge"
+import { type ETag, ETagMismatchError } from "."
+import { type IStore, type ListEntry, type Snapshot } from "./bridge"
 
 // InMemoryStore is a IStore that stores the files purely in memory,
 // providing zero persistence.

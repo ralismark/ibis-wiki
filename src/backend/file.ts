@@ -7,7 +7,7 @@ import { stateFromJSON, stateToJSON, trFromJSON, trToJSON } from "../codemirror/
 import { ExternMemo, ExternState } from "../extern"
 import { DEBOUNCE_MS, LsWal, STATE_REPLY_TIMEOUT_MS } from "../globals"
 import { assertUnreachable, sleep } from "../util"
-import { ETag, ETagMismatchError, Store } from "./store"
+import { type ETag, ETagMismatchError, Store } from "./store"
 
 // TODO when we close a file before it's put, it's not actually put
 

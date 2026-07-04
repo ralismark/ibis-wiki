@@ -1,20 +1,6 @@
-import { originalDocChangeEffect, unifiedMergeView } from "@codemirror/merge"
-import {
-	ChangeSet,
-	Compartment,
-	EditorState,
-	Extension,
-	StateEffect,
-	StateEffectType,
-	StateField,
-	Text,
-} from "@codemirror/state"
+import { unifiedMergeView, updateOriginalDoc } from "@codemirror/merge"
+import { Compartment, EditorState, type Extension, StateEffect, StateField, Text } from "@codemirror/state"
 export { getOriginalDoc } from "@codemirror/merge"
-
-// HACK to get the StateEffectType
-export const updateOriginalDoc: StateEffectType<{ doc: Text; changes: ChangeSet }> = (
-	originalDocChangeEffect(EditorState.create({ doc: Text.empty }), ChangeSet.empty(0)) as any
-).type
 
 /*
  * This entire this is a big HACK for multiple reasons:

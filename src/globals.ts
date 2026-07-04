@@ -1,4 +1,4 @@
-import { LocalStorageEntry, ScopedLocalStorage } from "./util/scopedLocalStorage"
+import { type LocalStorageEntry, ScopedLocalStorage } from "./util/scopedLocalStorage"
 
 export const LsIbis = new ScopedLocalStorage("ibis/")
 export const LsWal = LsIbis.scoped("wal/")

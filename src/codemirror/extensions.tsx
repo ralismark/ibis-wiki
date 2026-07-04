@@ -137,6 +137,16 @@ const extensions: Extension = [
 			add: (from: number, to: number, value: Decoration) => void,
 			sliceDoc: (from: number, to: number) => string,
 		) {
+			if (node.name === "HorizontalRule") {
+				add(
+					node.from,
+					node.from,
+					Decoration.line({
+						attributes: { class: "cm-linebreak" },
+					}),
+				)
+			}
+
 			if (node.name === "RefLink") {
 				add(
 					node.from + 2,

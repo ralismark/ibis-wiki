@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
 import { useExtern, useExternOr } from "../extern"
 import { shortdate, today } from "../util/calendar"
-import { type IWidget, WidgetContent, type WidgetControl } from "./Widget"
+import { IWidget, WidgetContent, type WidgetControl } from "./Widget"
 
-export class FileWidget implements IWidget {
+export class FileWidget extends IWidget {
 	readonly path: string
 
 	constructor(path: string) {
+		super()
 		this.path = path
 	}
 
@@ -64,7 +65,7 @@ export class FileWidget implements IWidget {
 			["backlinks", backlinks],
 		]
 
-		return new WidgetContent("FileWidget").withTitle(this.path).withBody(
+		return new WidgetContent("FileWidget").withTitle(<>{this.path}</>).withBody(
 			<>
 				{conflicting && (
 					<>
@@ -99,6 +100,10 @@ export class TodayWidget extends FileWidget {
 	}
 
 	show(ctl: WidgetControl): WidgetContent {
-		return super.show(ctl).withTitle("Today: " + this.path)
+		return super.show(ctl).withTitle(
+			<>
+				<em>Today:</em> {this.path}
+			</>,
+		)
 	}
 }

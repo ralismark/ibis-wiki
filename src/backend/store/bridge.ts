@@ -1,5 +1,5 @@
 import { Feed } from "../../extern"
-import { ETag } from "."
+import { type ETag } from "."
 
 export type Snapshot = {
 	content: string

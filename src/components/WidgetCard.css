@@ -1,0 +1,54 @@
+.WidgetCard {
+	width: var(--content-width); /* default */
+
+	> h1 {
+		position: sticky;
+		top: 0;
+
+		padding-bottom: 0.5lh;
+		margin: 0 0;
+
+		background: radial-gradient(
+			80% 90% at top in xyz,
+			color-mix(in srgb, var(--filled-bg), var(--body-bg) 50%) 0%,
+			transparent 100%
+		);
+
+		text-align: center;
+		font-size: 1em;
+		color: var(--filled-fg);
+
+		z-index: 10;
+	}
+
+	> h1:not(:hover) > menu {
+		display: none;
+	}
+
+	menu {
+		position: absolute;
+		top: 0;
+		left: 50%;
+		transform: translateX(-50%);
+
+		z-index: 20;
+
+		margin: 0;
+		padding: 0;
+
+		display: flex;
+		justify-content: center;
+		gap: 0.2em;
+
+		list-style: none;
+
+		button {
+			border-radius: 50%;
+			border: none;
+			width: 1lh;
+			height: 1lh;
+			text-align: center;
+			cursor: pointer;
+		}
+	}
+}

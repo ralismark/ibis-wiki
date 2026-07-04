@@ -4,9 +4,9 @@ import { FacadeExtern } from "../backend"
 import { useExtern, useExternOr } from "../extern"
 import { dateRange, shortdate, today } from "../util/calendar"
 import { FileWidget } from "./FileWidget"
-import { type IWidget, WidgetContent, type WidgetControl } from "./Widget"
+import { IWidget, WidgetContent, type WidgetControl } from "./Widget"
 
-export class CalendarWidget implements IWidget {
+export class CalendarWidget extends IWidget {
 	show(ctl: WidgetControl): WidgetContent {
 		const facade = useExtern(FacadeExtern)
 		const listing = useExternOr(facade?.listing, new Set())
@@ -29,11 +29,12 @@ export class CalendarWidget implements IWidget {
 		}
 
 		return new WidgetContent("CalendarWidget")
-			.withControl(">", () => {
+			.withTitle(<em>~ Cal ~</em>)
+			.withControl("+", () => {
 				setStartDate(adjustMonth(1))
 				setEndDate(adjustMonth(1))
 			})
-			.withControl("<", () => {
+			.withControl("-", () => {
 				setStartDate(adjustMonth(-1))
 				setEndDate(adjustMonth(-1))
 			})

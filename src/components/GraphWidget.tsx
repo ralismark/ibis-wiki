@@ -4,7 +4,7 @@ import { useRef, useState } from "react"
 import { FacadeExtern } from "../backend"
 import { useEffectAsync, useExtern } from "../extern"
 import { FileWidget } from "./FileWidget"
-import { type IWidget, WidgetContent, type WidgetControl } from "./Widget"
+import { IWidget, WidgetContent, type WidgetControl } from "./Widget"
 
 const RE_DIARY = /^[0-9]{1,2}[A-Z][a-z]{2}[0-9]{2}$/
 
@@ -13,7 +13,7 @@ function group(path: string) {
 	return 0
 }
 
-export class GraphWidget implements IWidget {
+export class GraphWidget extends IWidget {
 	show(ctl: WidgetControl): WidgetContent {
 		const ref = useRef<SVGSVGElement>(null)
 		const facade = useExtern(FacadeExtern)
@@ -166,31 +166,33 @@ export class GraphWidget implements IWidget {
 			[ref, facade, hideDiaryDays],
 		)
 
-		return new WidgetContent("GraphWidget").withTitle("~ Graph ~").withBody(
-			<>
-				<label>
-					<input
-						type="checkbox"
-						checked={hideDiaryDays}
-						onChange={(e) => setHideDiaryDays(e.target.checked)}
-					/>
-					Hide diary entries
-				</label>
+		return new WidgetContent("GraphWidget")
+			.withTitle(<em>~ Graph ~</em>)
+			.withBody(
+				<>
+					<label>
+						<input
+							type="checkbox"
+							checked={hideDiaryDays}
+							onChange={(e) => setHideDiaryDays(e.target.checked)}
+						/>
+						Hide diary entries
+					</label>
 
-				<div className={`GraphWidget__wrapper`}>
-					<svg ref={ref}>
-						<defs>
-							<filter x="0" y="0" width="1" height="1" id="textbg">
-								<feFlood floodColor="#00000088" result="bg" />
-								<feMerge>
-									<feMergeNode in="bg" />
-									<feMergeNode in="SourceGraphic" />
-								</feMerge>
-							</filter>
-						</defs>
-					</svg>
-				</div>
-			</>,
-		)
+					<div className={`GraphWidget__wrapper`}>
+						<svg ref={ref}>
+							<defs>
+								<filter x="0" y="0" width="1" height="1" id="textbg">
+									<feFlood floodColor="#00000088" result="bg" />
+									<feMerge>
+										<feMergeNode in="bg" />
+										<feMergeNode in="SourceGraphic" />
+									</feMerge>
+								</filter>
+							</defs>
+						</svg>
+					</div>
+				</>,
+			)
 	}
 }

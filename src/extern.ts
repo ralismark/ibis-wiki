@@ -1,4 +1,4 @@
-import { DependencyList, useEffect, useState, useSyncExternalStore } from "react"
+import { type DependencyList, useEffect, useState, useSyncExternalStore } from "react"
 
 export interface Extern<T> {
 	subscribe(onStoreChange: () => void): () => void

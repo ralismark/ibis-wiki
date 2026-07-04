@@ -18,3 +18,12 @@ repos:
         # dprint uses concurrency when processing multiple files
         require_serial: true
         language: system
+
+  - repo: local
+    hooks:
+      - id: tsc
+        name: tsc
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: false
+        entry: tsc --build --noEmit
+        language: system

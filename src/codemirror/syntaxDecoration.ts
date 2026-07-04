@@ -1,7 +1,7 @@
 import { syntaxTree } from "@codemirror/language"
-import { Extension, RangeSetBuilder } from "@codemirror/state"
-import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view"
-import { SyntaxNodeRef } from "@lezer/common"
+import { type Extension, RangeSetBuilder } from "@codemirror/state"
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view"
+import { type SyntaxNodeRef } from "@lezer/common"
 
 export default function syntaxDecoration(spec: {
 	handle: (

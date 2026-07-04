@@ -144,6 +144,8 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 	const query = queryOrig.trim()
 	const [selected, setSelected] = useState("")
 
+	const dialogRef = useRef<HTMLDialogElement>(null)
+
 	// reset selection when search cleared
 	useEffect(() => {
 		if (query === "") setSelected("")
@@ -164,9 +166,10 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 
 	const acceptSelected = () => {
 		const match = allSugs.find(({ key }) => key === selected)
+		console.log(match)
 		if (match) {
 			match.activate()
-			setQuery("")
+			dialogRef.current?.close()
 		}
 	}
 
@@ -174,8 +177,6 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 
 	const resultsId = useId()
 	const activeId = useId()
-
-	const dialogRef = useRef<HTMLDialogElement>(null)
 
 	const dirty = useExtern(NumDirty)
 	const syncing = useExtern(NumSyncing)

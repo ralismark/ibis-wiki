@@ -1,13 +1,8 @@
-import type { JSX } from "react"
+import { type JSX } from "react"
 import { type IbisConfig } from "../config"
-import { assertUnreachable } from "../util"
-import { CalendarWidget } from "./CalendarWidget"
-import { ConfigWidget } from "./ConfigWidget"
-import { FileWidget, TodayWidget } from "./FileWidget"
-import { GraphWidget } from "./GraphWidget"
 
 export interface SiteControl {
-	open(newWidget: Widget): void
+	open(newWidget: IWidget): void
 	updateConfig(config: IbisConfig): void
 }
 
@@ -18,15 +13,24 @@ export const DummySiteControl: SiteControl = {
 
 export interface WidgetControl extends SiteControl {
 	closeSelf(): void
+	moveLeft(): void
+	moveRight(): void
 }
 
-export interface IWidget {
-	show(ctl: WidgetControl): WidgetContent
+export abstract class IWidget {
+	static nextId: number = 1
+	readonly id: number
+
+	constructor() {
+		this.id = IWidget.nextId++
+	}
+
+	abstract show(ctl: WidgetControl): WidgetContent
 }
 
 export class WidgetContent {
 	className: string
-	title: string = ""
+	title: JSX.Element = <></>
 	controls: Array<[string, () => void]> = []
 	body: JSX.Element = <></>
 
@@ -34,7 +38,7 @@ export class WidgetContent {
 		this.className = className
 	}
 
-	withTitle(title: string): this {
+	withTitle(title: JSX.Element): this {
 		this.title = title
 		return this
 	}
@@ -48,24 +52,4 @@ export class WidgetContent {
 		this.body = body
 		return this
 	}
-}
-
-export type Widget = CalendarWidget | ConfigWidget | TodayWidget | FileWidget | GraphWidget
-
-export function widgetToRepr(w: Widget): string {
-	if (w instanceof CalendarWidget) return "~calendar"
-	else if (w instanceof ConfigWidget) return "~config"
-	else if (w instanceof TodayWidget) return "~today"
-	else if (w instanceof FileWidget) return ":" + w.path
-	else if (w instanceof GraphWidget) return "~graph"
-	else assertUnreachable(w)
-}
-
-export function reprToWidget(s: string): Widget | null {
-	if (s === "~calendar") return new CalendarWidget()
-	else if (s === "~config") return new ConfigWidget()
-	else if (s === "~today") return new TodayWidget()
-	else if (s.startsWith(":")) return new FileWidget(s.substring(1))
-	else if (s === "~graph") return new GraphWidget()
-	else return null
 }
