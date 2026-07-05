@@ -92,7 +92,7 @@ textarea, select, input, button, a[role="button"] {
 /* Top-level App ----------------------------------------------------------- */
 
 html, body, main {
-	height: 100vh;
+	height: 100dvh;
 }
 
 .Cards {
@@ -100,12 +100,13 @@ html, body, main {
 }
 
 .CardsRow {
+	--CardsRow-gap: 2rem;
+
 	display: flex;
 	flex-direction: row;
 	overflow-x: scroll;
-	gap: 2rem;
 
-	padding: 0 calc((100vw - var(--content-width)) / 2);
+	padding: 0 calc((100vw - var(--content-width) - var(--CardsRow-gap)) / 2);
 
 	> * {
 		/* in order to have each one scroll independently */
@@ -115,5 +116,6 @@ html, body, main {
 		height: fit-content;
 		max-height: 100%;
 		overflow-y: auto;
+		padding: 0 calc(var(--CardsRow-gap) / 2);
 	}
 }

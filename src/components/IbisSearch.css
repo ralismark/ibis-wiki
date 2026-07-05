@@ -1,11 +1,11 @@
-@keyframes PaletteButton__spin {
+/*@keyframes PaletteButton__spin {
 	from {
 		transform: rotate(0deg);
 	}
 	to {
 		transform: rotate(360deg);
 	}
-}
+}*/
 
 .PaletteButton {
 	width: 3rem;
@@ -25,14 +25,16 @@
 		height: 100%;
 		border-radius: 50%;
 
-		background: repeating-conic-gradient(
+		background: var(--secondary);
+
+		/*background: repeating-conic-gradient(
 			var(--secondary) 0%,
 			var(--secondary) 20%,
 			transparent 20%,
 			transparent 50%
 		);
 
-		animation: PaletteButton__spin 1s infinite;
+		animation: PaletteButton__spin 1s infinite;*/
 	}
 
 	button {

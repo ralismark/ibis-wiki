@@ -21,6 +21,28 @@
 	border-bottom: 1px solid var(--stroke);
 }
 
+.cm-scroller {
+	overflow: initial !important;
+}
+
+.cm-gutter {
+	position: absolute;
+	left: 0;
+	transform: translateX(-100%);
+	width: 1rem;
+}
+
+.cm-gutterElement > span {
+	display: block;
+	height: 100%;
+	align-content: center;
+}
+
+.cm-foldPlaceholder {
+	background: none !important;
+	float: right;
+}
+
 .cm-editor .cm-line {
 	line-height: 1.15;
 	padding-top: 0.2em;
@@ -48,6 +70,15 @@
 	&:has(.cm-tag-h1, .cm-tag-h2, .cm-tag-h3, .cm-tag-h4) {
 		color: var(--secondary);
 		background: color-mix(in srgb, var(--secondary), transparent 90%);
+	}
+
+	&:has(.cm-foldPlaceholder) {
+		mask: conic-gradient(
+			from -45deg at bottom,
+			#0000,
+			#000 1deg 89deg,
+			#0000 90deg
+		) 50%/20px 100%;
 	}
 }
 

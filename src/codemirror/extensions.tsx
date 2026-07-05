@@ -4,6 +4,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import {
 	bracketMatching,
 	defaultHighlightStyle,
+	foldGutter,
 	indentService,
 	indentUnit,
 	syntaxHighlighting,
@@ -65,26 +66,17 @@ class KatexWidget extends WidgetType {
 		return other.contents == this.contents
 	}
 
-	toDOM(view: EditorView) {
+	toDOM() {
 		const span = document.createElement("span")
-		span.classList.add("KatexWidget") // import("katex").then((katex) => {
-		 // 	katex.default.render(this.contents, span, {
-		// 		displayMode: false,
-		// 		throwOnError: false,
-		// 	})
-		// })
-		;(span as any).destroy = view.plugin(reactPortal)!.portal!(
-			<>
-				Foo
-			</>,
-			span,
-		)
+		span.classList.add("KatexWidget")
+		import("katex").then((katex) => {
+			katex.default.render(this.contents, span, {
+				displayMode: false,
+				throwOnError: false,
+			})
+		})
 
 		return span
-	}
-
-	destroy(dom: HTMLElement) {
-		;(dom as any).destroy()
 	}
 }
 
@@ -106,6 +98,7 @@ const extensions: Extension = [
 	bracketMatching(),
 	closeBrackets(),
 	highlightActiveLine(),
+	foldGutter(),
 	EditorView.lineWrapping,
 	keymap.of([
 		{
@@ -120,6 +113,7 @@ const extensions: Extension = [
 	indentService.of(() => 0), // no indent
 	indentUnit.of("    "), // 4-space indent
 	breakindent,
+
 	EditorView.theme(
 		{
 			"& .cm-content": {

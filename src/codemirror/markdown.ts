@@ -1,6 +1,7 @@
 import { CompletionContext, type CompletionResult } from "@codemirror/autocomplete"
 import {
 	defineLanguageFacet,
+	foldService,
 	HighlightStyle,
 	Language,
 	languageDataProp,
@@ -9,6 +10,7 @@ import {
 	syntaxTree,
 } from "@codemirror/language"
 import { type Extension } from "@codemirror/state"
+import { NodeType, type SyntaxNode } from "@lezer/common"
 import { styleTags, tags } from "@lezer/highlight"
 import * as md from "@lezer/markdown"
 import { FacadeExtern } from "../backend"
@@ -112,6 +114,37 @@ const Math: md.MarkdownExtension & Extension = {
 	extension: [],
 }
 
+// Folding --------------------------------------------------------------------
+
+// from https://code.haverbeke.berlin/codemirror/lang-markdown/src/branch/main/src/markdown.ts
+
+function isHeading(type: NodeType) {
+	let match = /^(?:ATX|Setext)Heading(\d)$/.exec(type.name)
+	return match ? +match[1] : null
+}
+
+function findSectionEnd(headerNode: SyntaxNode, level: number) {
+	let at = headerNode.nextSibling
+	while (at) {
+		let depth = isHeading(at.type)
+		if (depth && depth <= level) break
+		at = at.nextSibling
+	}
+
+	return at ? at.from - 1 : null
+}
+
+const headerIndent = foldService.of((state, start, end) => {
+	for (let node: SyntaxNode | null = syntaxTree(state).resolveInner(end, -1); node; node = node.parent) {
+		if (node.from < start) break
+		let heading = isHeading(node.type)
+		if (!heading) continue
+		let upto = findSectionEnd(node, heading) ?? state.doc.length
+		if (upto > end) return { from: end, to: upto }
+	}
+	return null
+})
+
 // Language Definition --------------------------------------------------------
 
 // compatibility between `@lezer/markdown` and `@codemirror/language`, since
@@ -189,6 +222,7 @@ export default new LanguageSupport(
 		},
 	}),
 	[
+		headerIndent,
 		RefLink,
 		syntaxHighlighting(
 			HighlightStyle.define([

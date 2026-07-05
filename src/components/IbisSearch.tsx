@@ -146,9 +146,9 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 
 	const dialogRef = useRef<HTMLDialogElement>(null)
 
-	// reset selection when search cleared
+	// reset selection to default when search cleared
 	useEffect(() => {
-		if (query === "") setSelected("")
+		if (query === "") setSelected("general/open")
 	}, [query])
 
 	const contents = getSuggestions(query, ctl, facade)
@@ -204,7 +204,9 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 						e.currentTarget.close()
 					}
 				}}
-				onClose={() => setQuery("")}
+				onClose={() => {
+					setQuery(""), setSelected("")
+				}}
 			>
 				<input
 					type="search"
