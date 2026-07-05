@@ -246,7 +246,7 @@ export function IbisSearch(props: { ctl: SiteControl; facade: Facade }) {
 												onClick={(e) => {
 													e.preventDefault()
 													s.activate()
-													setQuery("")
+													dialogRef.current?.close()
 												}}
 												onFocus={() => setSelected(s.key)}
 												onMouseOver={() => setSelected(s.key)}

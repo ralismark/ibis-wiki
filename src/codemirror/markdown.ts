@@ -159,6 +159,9 @@ export default new LanguageSupport(
 						"ATXHeading4/...": tags.heading4,
 						"ATXHeading5/...": tags.heading5,
 						"ATXHeading6/...": tags.heading6,
+						// disable underlined headings
+						"SetextHeading1/...": tags.content,
+						"SetextHeading2/...": tags.content,
 
 						// lists
 						// "BulletList/ListIem/ListMark": tx.ulMark,
@@ -190,7 +193,7 @@ export default new LanguageSupport(
 		syntaxHighlighting(
 			HighlightStyle.define([
 				// fallbacks
-				{ tag: tags.punctuation, color: "rgb(127.5, 127.5, 127.5)" },
+				{ tag: tags.punctuation, color: "var(--stroke)" },
 
 				// standard formatting tags
 				{ tag: tags.emphasis, fontStyle: "italic" },
@@ -205,7 +208,7 @@ export default new LanguageSupport(
 				{ tag: tags.heading, class: "cm-tag-h4" },
 
 				// other
-				{ tag: tags.link, color: "#7777ee", textDecoration: "underline", cursor: "pointer" },
+				{ tag: tags.link, color: "var(--linking)", textDecoration: "underline", cursor: "pointer" },
 				{ tag: tags.contentSeparator, class: "cm-tag-contentseparator" },
 			]),
 		),

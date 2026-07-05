@@ -1,6 +1,7 @@
 import "./FileWidget.css"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FacadeExtern, File } from "../backend"
+import { EditorStateRef } from "../codemirror/Controlled"
 import { useExtern, useExternOr } from "../extern"
 import { shortdate, today } from "../util/calendar"
 import { IWidget, WidgetContent, type WidgetControl } from "./Widget"
@@ -32,12 +33,11 @@ export class FileWidget extends IWidget {
 			}
 		}, [facade])
 
-		const ref = useRef(null)
 		// attach opened file to element
-		useEffect(() => {
-			return file?.esr.attach(ref)
-		}, [file, ref])
+		const cmParentRef = useRef<HTMLElement>(null)
+		const portalled = EditorStateRef.use(file?.esr, cmParentRef, [file])
 
+		// other info
 		const conflicting = useExternOr(file?.isConflicting, false)
 
 		// bottom meta
@@ -73,7 +73,8 @@ export class FileWidget extends IWidget {
 					</>
 				)}
 
-				<section ref={ref}>{!file && "loading..."}</section>
+				<section ref={cmParentRef}>{!file && "loading..."}</section>
+				{portalled}
 
 				<ul>
 					{bottomMeta.map(

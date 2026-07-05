@@ -1,6 +1,7 @@
 import { EditorState, Transaction, type TransactionSpec } from "@codemirror/state"
-import { EditorView } from "@codemirror/view"
-import type { RefObject } from "react"
+import { EditorView, ViewPlugin } from "@codemirror/view"
+import { type JSX, type ReactNode, type RefObject, useEffect, useState } from "react"
+import { createPortal } from "react-dom"
 import { Feed } from "../extern"
 
 /*
@@ -25,11 +26,6 @@ export class EditorStateRef {
 		return this.state
 	}
 
-	/*setState(state: EditorState) {
-    this.state = state;
-    this.feed.signal(state);
-    }*/
-
 	update(tr: Transaction): Transaction
 	update(...specs: TransactionSpec[]): Transaction
 	update(...input: TransactionSpec[] | [Transaction]): Transaction {
@@ -42,27 +38,72 @@ export class EditorStateRef {
 		return tr
 	}
 
-	attach(ref: RefObject<HTMLElement | null>): () => void {
-		if (ref.current) {
+	static use(
+		self: EditorStateRef | undefined,
+		parent: RefObject<HTMLElement | null>,
+		deps: any[],
+	) {
+		const [reactChildren, setReactChildren] = useState<Map<number, [ReactNode, HTMLElement]>>(new Map())
+
+		useEffect(() => {
+			if (!self || !parent.current) return
+
 			const view = new EditorView({
-				parent: ref.current,
-				state: this.state,
-				dispatch: (tr) => this.update(tr),
+				parent: parent.current,
+				state: self.state,
+				extensions: [],
+				dispatch: tr => self.update(tr),
 			})
-			const unsub = this.subscribe((tr) => {
-				/*if (tr instanceof EditorState) {
-          view.setState(tr)
-        } else*/ {
-					view.update([tr])
-				}
+			const unsub = self.subscribe(tr => view.update([tr]))
+
+			view.plugin(reactPortal)!.setOutlet((children: ReactNode, domNode: HTMLElement) => {
+				const key = autoincrement++
+				setReactChildren(c => {
+					c = new Map(c)
+					c.set(key, [children, domNode])
+					return c
+				})
+				return () =>
+					setReactChildren(c => {
+						c = new Map(c)
+						c.delete(key)
+						return c
+					})
 			})
 
 			return () => {
 				unsub()
 				view.destroy()
 			}
-		}
+		}, [...deps, parent])
 
-		return () => {}
+		return (
+			<>
+				{Array.from(reactChildren, ([key, [children, domNode]]) => createPortal(children, domNode, key))}
+			</>
+		)
 	}
 }
+
+let autoincrement = 0
+
+type Portaller = (children: ReactNode, domNode: HTMLElement) => () => void
+
+export const reactPortal = ViewPlugin.fromClass(
+	class {
+		setOutlet: (fn: Portaller) => void
+		outlet: Promise<Portaller>
+
+		constructor() {
+			this.setOutlet = () => {}
+			this.outlet = new Promise(resolve => {
+				this.setOutlet = resolve
+			})
+		}
+
+		portal(children: ReactNode, domNode: HTMLElement): () => void {
+			const p = this.outlet.then(fn => fn(children, domNode))
+			return async () => (await p)()
+		}
+	},
+)

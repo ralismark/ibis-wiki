@@ -28,6 +28,8 @@ import { mergingDoc } from "./merge"
 import syntaxDecoration from "./syntaxDecoration"
 
 import "katex/dist/katex.min.css"
+import { reactPortal } from "./Controlled"
+import { markdownOutline } from "./outline"
 
 class ImagePreviewWidget extends WidgetType {
 	readonly url: string
@@ -63,16 +65,26 @@ class KatexWidget extends WidgetType {
 		return other.contents == this.contents
 	}
 
-	toDOM() {
+	toDOM(view: EditorView) {
 		const span = document.createElement("span")
-		span.classList.add("KatexWidget")
-		import("katex").then((katex) => {
-			katex.default.render(this.contents, span, {
-				displayMode: false,
-				throwOnError: false,
-			})
-		})
+		span.classList.add("KatexWidget") // import("katex").then((katex) => {
+		 // 	katex.default.render(this.contents, span, {
+		// 		displayMode: false,
+		// 		throwOnError: false,
+		// 	})
+		// })
+		;(span as any).destroy = view.plugin(reactPortal)!.portal!(
+			<>
+				Foo
+			</>,
+			span,
+		)
+
 		return span
+	}
+
+	destroy(dom: HTMLElement) {
+		;(dom as any).destroy()
 	}
 }
 
@@ -131,22 +143,15 @@ const extensions: Extension = [
 		{ dark: true },
 	),
 
+	reactPortal,
+	// markdownOutline,
+
 	syntaxDecoration({
 		handle: function(
 			node: SyntaxNodeRef,
 			add: (from: number, to: number, value: Decoration) => void,
 			sliceDoc: (from: number, to: number) => string,
 		) {
-			if (node.name === "HorizontalRule") {
-				add(
-					node.from,
-					node.from,
-					Decoration.line({
-						attributes: { class: "cm-linebreak" },
-					}),
-				)
-			}
-
 			if (node.name === "RefLink") {
 				add(
 					node.from + 2,
@@ -188,7 +193,7 @@ const extensions: Extension = [
 								title: href,
 							},
 
-							onmousedown(from: number, to: number) {
+							onmousedown() {
 								window.open(href, "_blank", "noopener,noreferrer")
 							},
 						}),

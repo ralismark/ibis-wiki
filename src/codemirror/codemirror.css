@@ -33,13 +33,13 @@
 	}
 
 	.cm-tag-h1 {
-		font-size: 1.5em;
+		font-size: 1.8em;
 	}
 	.cm-tag-h2 {
-		font-size: 1.4em;
+		font-size: 1.6em;
 	}
 	.cm-tag-h3 {
-		font-size: 1.3em;
+		font-size: 1.4em;
 	}
 	.cm-tag-h4 {
 		font-size: 1.2em;
@@ -47,7 +47,6 @@
 
 	&:has(.cm-tag-h1, .cm-tag-h2, .cm-tag-h3, .cm-tag-h4) {
 		color: var(--secondary);
-
 		background: color-mix(in srgb, var(--secondary), transparent 90%);
 	}
 }
