@@ -123,11 +123,11 @@ function isHeading(type: NodeType) {
 	return match ? +match[1] : null
 }
 
-function findSectionEnd(headerNode: SyntaxNode, level: number) {
+function findSectionEnd(headerNode: SyntaxNode, _level: number) {
 	let at = headerNode.nextSibling
 	while (at) {
 		let depth = isHeading(at.type)
-		if (depth && depth <= level) break
+		if (depth) break
 		at = at.nextSibling
 	}
 
