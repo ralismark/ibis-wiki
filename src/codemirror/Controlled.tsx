@@ -42,7 +42,7 @@ export class EditorStateRef {
 		self: EditorStateRef | undefined,
 		parent: RefObject<HTMLElement | null>,
 		deps: any[],
-	) {
+	): JSX.Element {
 		const [reactChildren, setReactChildren] = useState<Map<number, [ReactNode, HTMLElement]>>(new Map())
 
 		useEffect(() => {

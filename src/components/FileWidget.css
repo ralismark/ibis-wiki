@@ -1,3 +1,18 @@
 .FileWidget {
 	margin-bottom: 50vh;
+
+	.FileWidget__finishmerge {
+		position: sticky;
+		top: 1.5lh;
+		float: right;
+
+		color: var(--filled-fg);
+		background: var(--filled-bg);
+
+		z-index: 10;
+	}
+
+	.FileWidget__content {
+		clear: both;
+	}
 }

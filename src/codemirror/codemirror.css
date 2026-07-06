@@ -29,7 +29,7 @@
 	position: absolute;
 	left: 0;
 	transform: translateX(-100%);
-	width: 1rem;
+	width: calc(var(--CardsRow-gap, 2rem) / 2);
 }
 
 .cm-gutterElement > span {

@@ -100,7 +100,7 @@ html, body, main {
 }
 
 .CardsRow {
-	--CardsRow-gap: 2rem;
+	--CardsRow-gap: 4rem;
 
 	display: flex;
 	flex-direction: row;

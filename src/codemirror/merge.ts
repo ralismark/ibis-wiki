@@ -37,9 +37,15 @@ export const merging = new Compartment()
 
 function compartment(m: Text | null): Extension[] {
 	if (m === null) return []
-	return unifiedMergeView({
-		original: m,
-	})
+	return [
+		unifiedMergeView({
+			original: m,
+		}),
+		EditorState.phrases.of({
+			"Accept": "Local",
+			"Reject": "Remote",
+		}),
+	]
 }
 
 // HACK effect to make the compartment reflect the state of mergingDoc e.g.

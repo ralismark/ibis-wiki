@@ -69,11 +69,11 @@ export class FileWidget extends IWidget {
 			<>
 				{conflicting && (
 					<>
-						<button onClick={() => file!.resolveConflict()}>Finish Merging</button>
+						<button className="FileWidget__finishmerge" onClick={() => file!.resolveConflict()}>Finish Merging</button>
 					</>
 				)}
 
-				<section ref={cmParentRef}>{!file && "loading..."}</section>
+				<section className="FileWidget__content" ref={cmParentRef}>{!file && "loading..."}</section>
 				{portalled}
 
 				<ul>
